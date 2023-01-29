@@ -29,11 +29,11 @@ onMounted(async () => {
 <style lang="postcss" scoped>
 
 :deep(h2) {
-    @apply font-bold font-serif text-2xl text-sky-500 mt-8 mb-4;
+    @apply font-bold font-serif text-2xl text-sky-500 mt-16;
 }
 
 :deep(h3) {
-    @apply font-bold font-serif italic text-xl text-sky-600 mt-8 mb-2;
+    @apply font-bold font-serif italic text-xl text-sky-600 mt-8;
 }
 
 :deep(p) {
@@ -41,11 +41,11 @@ onMounted(async () => {
 }
 
 :deep(a) {
-    @apply text-blue-500 underline hover:animate-pulse;
+    @apply text-violet-500 underline hover:animate-pulse;
 }
 
 :deep(li) {
-    @apply text-slate-800 ml-8;
+    @apply text-slate-700 ml-8;
 }
 
 :deep(ul) {
