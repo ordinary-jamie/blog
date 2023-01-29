@@ -60,7 +60,7 @@ onMounted(async () => {
 }
 
 :deep(table) {
-    @apply shadow-md rounded-md border bg-slate-50 table-auto border-separate border-spacing-1 border-slate-200 min-w-full;
+    @apply bg-slate-50 rounded-lg ring-slate-300 ring-1 shadow-md table-auto border-separate border-spacing-1 min-w-full;
 }
 
 :deep(th) {
@@ -81,7 +81,7 @@ onMounted(async () => {
 }
 
 :deep(pre) {
-    @apply shadow-md rounded-md border-slate-200 border-2 select-all;
+    @apply p-4 bg-slate-50 rounded-lg ring-slate-300 ring-1 shadow-md select-all;
 }
 
 :deep(.token) {

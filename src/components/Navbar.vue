@@ -21,11 +21,11 @@ onMounted(() => {
                 border-dotted border-b-4 border-sky-900">
         <h1 v-show="showFullName" class="text-slate-800
             text-4xl font-serif font-bold tracking-tighter">
-            <span class="text-sky-400 text-xl mr-1">><code class="animate-ping">_</code></span>Jamie Phan
+            <span class="text-sky-500 text-xl mr-1">><code class="animate-ping">_</code></span>Jamie Phan
         </h1>
         <h1 v-show="!showFullName" class="text-slate-800
             text-4xl font-serif font-bold tracking-tighter">
-            <span class="text-sky-400 text-xl mr-1">><code class="animate-ping">_</code></span>J.P.
+            <span class="text-sky-500 text-xl mr-1">><code class="animate-ping">_</code></span>J.P.
         </h1>
         <div class="flex-auto"></div>
         <div class="animate-bounce opacity-0 hover:opacity-100 ease-in-out duration-300">👻<sup
