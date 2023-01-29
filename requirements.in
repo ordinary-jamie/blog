@@ -1,0 +1,9 @@
+black
+isort
+
+click
+markdown
+python-slugify
+pyyaml
+pydantic
+attrs
