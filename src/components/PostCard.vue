@@ -57,7 +57,7 @@ const routeTo = computed(() => {
                 class="p-4 bg-slate-50 rounded-lg ring-slate-300 ring-1 shadow-md hover:ring-sky-500 hover:bg-sky-50 group">
                 <div class="flex flex-nowrap">
                     <div>
-                        <h1 class="text-slate-700 font-bold">{{ title }}</h1>
+                        <h2 class="text-slate-700 font-bold">{{ title }}</h2>
                     </div>
                     <div class="grow"></div>
                     <div class="flex flex-col text-right">

@@ -27,9 +27,6 @@ onMounted(async () => {
 </template>
 
 <style lang="postcss" scoped>
-:deep(h1) {
-    @apply font-serif tracking-tighter text-5xl text-sky-500 mt-8 mb-16;
-}
 
 :deep(h2) {
     @apply font-bold font-serif text-2xl text-sky-500 mt-8 mb-4;

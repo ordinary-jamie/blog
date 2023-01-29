@@ -29,7 +29,7 @@ const posts = computed(() => {
 <template>
     <div class="flex flex-col gap-8">
         <div class="flex items-end">
-            <h1 class="font-serif tracking-tighter text-5xl text-sky-500">Posts</h1>
+            <h1>Posts</h1>
             <div class="flex-grow"></div>
             <Select v-model="tagFilter" label="Tag" prompt="Filter tags" :options="tags" />
             <Select v-model="sectionFilter" label="Section" prompt="Filter section" :options="sections" />

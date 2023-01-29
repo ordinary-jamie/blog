@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+
+    h1 {
+        @apply font-serif tracking-tighter text-5xl text-sky-500;
+    }
+
+}
