@@ -19,7 +19,7 @@
 }
 
 :deep(li) {
-    @apply text-slate-700 ml-8;
+    @apply text-slate-700 ml-8 leading-6;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -72,15 +72,18 @@
 /* ------------------------------------------------------------------------- */
 /* Table of contents */
 :deep(div.toc) {
-    @apply w-72 fixed left-16 top-48 text-xs;
+    @apply text-xs w-full sm:w-2/3 mt-8 p-2 rounded-lg ring-1 ring-slate-300 shadow-md
+        2xl:fixed 2xl:w-72 2xl:mt-0 2xl:p-0 2xl:left-16 2xl:top-48 2xl:ring-0 2xl:shadow-none;
 }
 
 :deep(div.toc > .toctitle) {
-    @apply font-semibold font-serif text-slate-500 ml-2;
+    @apply font-semibold font-serif ml-2 text-slate-600 text-lg
+        2xl:text-slate-500 2xl:text-sm;
 }
 
 :deep(div.toc a) {
-    @apply text-slate-400 my-2 leading-6 no-underline hover:text-sky-400;;
+    @apply my-2 leading-6 no-underline hover:text-sky-400 text-slate-500
+        2xl:text-slate-400;
 }
 
 :deep(.toc ul) {
