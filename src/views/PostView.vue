@@ -1,7 +1,11 @@
 <script setup>
 import { onMounted, onUpdated, ref } from 'vue';
+
 import Prism from "prismjs";
 import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-http';
 import 'prismjs/components/prism-bash';
 import "prismjs/themes/prism.css";
 
@@ -29,6 +33,6 @@ onMounted(async () => {
     <div class="text-sm" v-html="html"></div>
 </template>
 
+<style lang="postcss" scoped src="/src/assets/post.css">
 
-
-<style lang="postcss" scoped src="/src/assets/post.css" />
+</style>
