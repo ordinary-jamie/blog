@@ -1,6 +1,7 @@
 import htmlmin
 import markdown
 from markdown.extensions.fenced_code import FencedCodeExtension
+from markdown.extensions.toc import TocExtension
 
 
 def convert_markdown_to_html(text: str) -> str:
@@ -9,5 +10,6 @@ def convert_markdown_to_html(text: str) -> str:
         extensions=[
             "tables",
             FencedCodeExtension(),
+            TocExtension(title="Contents"),
         ],
     ))

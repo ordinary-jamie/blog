@@ -133,7 +133,7 @@ class Post:
             output_file.parent.mkdir(parents=True)
 
         with output_file.open("w") as fd:
-            fd.write(md.convert_markdown_to_html(self.body))
+            fd.write(md.convert_markdown_to_html(f"# {self.front_matter.title}\n" + self.body))
 
 
 @define

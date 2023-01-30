@@ -68,3 +68,41 @@
 :deep(code) {
     text-shadow: none;
 }
+
+/* ------------------------------------------------------------------------- */
+/* Table of contents */
+:deep(div.toc) {
+    @apply w-72 fixed left-16 top-48 text-xs;
+}
+
+:deep(div.toc > .toctitle) {
+    @apply font-semibold font-serif text-slate-500 ml-2;
+}
+
+:deep(div.toc a) {
+    @apply text-slate-400 my-2 leading-6 no-underline hover:text-sky-400;;
+}
+
+:deep(.toc ul) {
+    /* Only top-level */
+    @apply list-none;
+}
+
+:deep(.toc li > ul) {
+    /* Only nested list have disc */
+    list-style-type: disc;
+}
+
+:deep(.toc li::marker) {
+    @apply text-slate-400;
+}
+
+:deep(.toc > * > li) {
+    /* Only top-level */
+    @apply ml-2;
+}
+
+:deep(.toc > * > li li) {
+    /* All leaves */
+    @apply ml-4;
+}
