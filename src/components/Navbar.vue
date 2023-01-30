@@ -31,6 +31,6 @@ onMounted(() => {
         <div class="animate-bounce opacity-0 hover:opacity-100 ease-in-out duration-300">👻<sup
                 class="text-red-400 text-xs font-bold"> boo!</sup></div>
         <NavbarItem routeTo="/" label="Home" />
-        <NavbarItem routeTo="/" label="About" />
+        <NavbarItem routeTo="/about" label="About" />
     </div>
 </template>

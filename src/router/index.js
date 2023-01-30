@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import AboutView from '../views/AboutView.vue'
 import PostView from '../views/PostView.vue'
 
 const router = createRouter({
@@ -11,8 +12,14 @@ const router = createRouter({
       component: HomeView
     },
     {
+      path: '/about',
+      name: 'about',
+      component: AboutView,
+    },
+    {
       path: '/posts/:section/:id(\\d+)',
-      component: PostView
+      component: PostView,
+      props: route => ({ assetPath: `${route.params.section}/${route.params.id}` }),
     }
   ]
 })

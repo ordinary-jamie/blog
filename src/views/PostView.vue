@@ -1,13 +1,16 @@
 <script setup>
 import { onMounted, onUpdated, ref } from 'vue';
-import { useRoute } from 'vue-router';
-
 import Prism from "prismjs";
 import 'prismjs/components/prism-python';
 import 'prismjs/components/prism-bash';
 import "prismjs/themes/prism.css";
 
-const route = useRoute();
+const props = defineProps({
+    assetPath: {
+        type: String,
+        required: true,
+    },
+})
 
 const html = ref();
 
@@ -16,7 +19,7 @@ onUpdated(() => {
 })
 
 onMounted(async () => {
-    const res = await import(`@/assets/${route.params.section}/${route.params.id}.html?raw`);
+    const res = await import(`/src/assets/${props.assetPath}.html?raw`);
     html.value = res.default;
 });
 
@@ -27,7 +30,6 @@ onMounted(async () => {
 </template>
 
 <style lang="postcss" scoped>
-
 :deep(h2) {
     @apply font-bold font-serif text-2xl text-sky-500 mt-16;
 }
