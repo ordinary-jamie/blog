@@ -4,7 +4,7 @@
             "ref": "dev/2",
             "title": "Understanding Python's WSGI.",
             "preview": "A deep dive into Python's WSGI framework.",
-            "date": "2022-03-18",
+            "date": "2023-01-18",
             "section": "dev",
             "tags": [
                 "python",
@@ -12,33 +12,49 @@
             ]
         },
         {
-            "ref": "dev/1",
+            "ref": "test/1",
             "title": "Sample.",
             "preview": "Sample Markdown testing.",
             "date": "2022-01-18",
-            "section": "dev",
+            "section": "test",
             "tags": [
                 "python",
                 "economics"
+            ]
+        },
+        {
+            "ref": "dev/3",
+            "title": "Host file as a blacklist.",
+            "preview": "Using an simple text file to blacklist websites.",
+            "date": "2020-12-13",
+            "section": "dev",
+            "tags": [
+                "networking"
             ]
         }
     ],
     "tagRefs": {
         "python": [
-            "dev/2",
-            "dev/1"
+            "test/1",
+            "dev/2"
+        ],
+        "economics": [
+            "test/1"
         ],
         "web": [
             "dev/2"
         ],
-        "economics": [
-            "dev/1"
+        "networking": [
+            "dev/3"
         ]
     },
     "sectionRefs": {
+        "test": [
+            "test/1"
+        ],
         "dev": [
             "dev/2",
-            "dev/1"
+            "dev/3"
         ]
     }
 }

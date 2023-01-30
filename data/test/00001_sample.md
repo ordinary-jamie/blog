@@ -4,7 +4,7 @@ title: Sample
 date: 2022-01-18
 preview: |
   Sample Markdown testing
-section: dev
+section: test
 tags:
   - python
   - economics
