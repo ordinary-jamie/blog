@@ -1,0 +1,418 @@
+<h1 id=golang-script-for-api-testing>GoLang script for API Testing.</h1> <div class=toc><span class=toctitle>Contents</span><ul> <li><a href=#golang-script-for-api-testing>GoLang script for API Testing.</a><ul> <li><a href=#what-this-gist-will-do>What this gist will do</a></li> <li><a href=#background>Background</a></li> <li><a href=#implementation-overview>Implementation Overview</a><ul> <li><a href=#1-test-case-type-in-go>1. Test Case Type in Go</a></li> <li><a href=#2-parsing-http-files>2. Parsing HTTP files</a></li> <li><a href=#3-walk-dir-for-http-files>3. Walk Dir for HTTP Files</a></li> </ul> </li> <li><a href=#putting-it-all-together>Putting it all together</a></li> <li><a href=#demonstration>Demonstration</a><ul> <li><a href=#the-demo-files>The demo Files</a><ul> <li><a href=#demoservicego>demoservice.go</a></li> <li><a href=#tests200http>tests/200.http</a></li> <li><a href=#tests400http>tests/400.http</a></li> <li><a href=#testgo>test.go</a></li> </ul> </li> </ul> </li> </ul> </li> </ul> </div> <h2 id=what-this-gist-will-do>What this gist will do</h2> <p>A simple GoLang script that will recursively find all <code>.http</code> files in some directory, parse and call them with the specified headers and body (optional), and compare it against a response pair (status code, headers and body).</p> <p>Simple usage demo:</p> <pre><code>$ ls tests/
+    200.http  400.http
+
+$ go run test.go -t tests/
+    ✓ API:tests\200.http
+    ✘ tests\400.http: Failed because 'Header mismatch for request-id'
+            Expected: '1ab2c3d4'
+            Actual: 'Some-Request-ID'
+
+    1 Errors caught
+    exit status 1
+</code></pre> <h2 id=background>Background</h2> <p>I know there are a lot of test frameworks like Mocha and Jest, but I've recently discovered an incredibly handy tool for making REST calls from VSCode, <a href="https://marketplace.visualstudio.com/items?itemName=humao.rest-client">Rest Client by Huachao Mao</a>.</p> <p>Basically, you write up the HTTP request in a <code>.http</code> file and the extension will give you a <code>"Send Request"</code> option. The request might look like this:</p> <pre><code class=language-http>GET http://api.steampowered.com/ISteamNews/GetNewsForApp/v0002/?appid=730&amp;count=3&amp;maxlength=300&amp;format=json HTTP/1.1
+User-Agent: PostmanRuntime/7.28.3
+Accept: application/json
+</code></pre> <p>I enjoy this extension a lot because it offers a great middle-ground between ease of packaging up the request (just a plain <code>.http</code> file with no metadata, as in Postman) and readability and ease of use (unlike, say a cURL command).</p> <p>So I wanted to use these files to specify a series of contract tests against a developed microservice for basic API testing.</p> <h2 id=implementation-overview>Implementation Overview</h2> <p>It's a pretty simple Go script, with three key components/steps:</p> <ol> <li>Define a test case type that has the HTTP request to make and the expected response. We define a method to compare the two here.</li> <li>Define a parsing function that parses <code>.http</code> files into the test case type (with the <code>net/http</code> Request and expected response)</li> <li>Recursively walk through a directory to find all <code>.http</code> files</li> </ol> <h3 id=1-test-case-type-in-go>1. Test Case Type in Go</h3> <p>{{&lt; tldr "Define a test case type that has the HTTP request to make and the expected response. We define a method to compare the two here" &gt;}}</p> <p>Our test type is a pretty simple; just a simple request, response container with a <code>Name string</code> for reporting:</p> <pre><code class=language-go>type HttpTestCase struct {
+    Name string
+    Request *http.Request
+    Expected struct {
+        StatusCode int
+        Headers map[string]string
+        Body string
+    }
+}
+</code></pre> <p>First, we define a couple of basic pass/fail methods for the type:</p> <pre><code class=language-go>func (tc *HttpTestCase) Pass() bool {
+    fmt.Printf(&quot;✓ API:%s\n&quot;, tc.Name)
+    return true
+}
+
+func (tc *HttpTestCase) Fail(reason string, expected interface{}, actual interface{}) bool {
+    fmt.Printf(&quot;✘ %s: Failed because '%s'\n\tExpected: '%v'\n\tActual: '%v'\n&quot;, tc.Name, reason, expected, actual)
+    return false
+}
+</code></pre> <p>We then implement the test method for this type</p> <pre><code class=language-go>import (
+    &quot;net/http&quot;
+    &quot;strings&quot;
+    &quot;io/ioutil&quot;
+)
+
+func (tc *HttpTestCase) Test(client *http.Client) bool {
+    if tc.Request == nil {
+        return tc.Fail(&quot;Could not parse test case&quot;, &quot;&quot;, &quot;&quot;)
+    }
+
+    // We have the consumer pass the client so they can
+    // make configurations as needed.
+    resp, _ := client.Do(tc.Request)
+
+    // Compare status codes
+    if resp.StatusCode != tc.Expected.StatusCode {
+        return tc.Fail(&quot;Incorrect status code&quot;, tc.Expected.StatusCode, resp.StatusCode)
+    }
+
+    // Compare the headers.
+    // Note we are only comparing a subset here,
+    // Hence only iterating over the expected headers.
+    for header, expected := range tc.Expected.Headers {
+        if actual := strings.ToLower(resp.Header.Get(header)); actual != expected {
+            return tc.Fail(&quot;Header mismatch for &quot; + header, expected, actual)
+        }
+    }
+
+    // Compare body.
+    // There's room for improvement here, as it is a strict comparison
+    // Removing whitespace would make this more robust.
+    if tc.Expected.Body != &quot;&quot; {
+        bodyBytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            return tc.Fail(&quot;Failed to parse body&quot;, tc.Expected.Body, &quot;&quot;)
+        }
+        actualBody := strings.TrimSpace(string(bodyBytes))
+        if actualBody != tc.Expected.Body {
+            return tc.Fail(&quot;Body does not match&quot;, tc.Expected.Body, actualBody)
+        }
+    }
+
+    return tc.Pass()
+}
+</code></pre> <h3 id=2-parsing-http-files>2. Parsing HTTP files</h3> <p>{{&lt; tldr "Define a parsing function that parses <code>.http</code> files into the test case type (with the <code>net/http</code> Request and expected response)"&gt;}}</p> <p>HTTP files can be broken down into 6 parts as described in the table. Each of these parts are sequential, one after the other in the file:</p> <table> <thead> <tr> <th>Capture Group(s)</th> <th>Example</th> <th>Regex</th> </tr> </thead> <tbody> <tr> <td>Request method and URL</td> <td><code>GET http://something.com HTTP/1.1</code></td> <td><code>^(GET&#124;POST&#124;PUT&#124;DELETE)\s+([^\s]*)\s?(HTTP/1.1)?\n</code></td> </tr> <tr> <td>Request key-value header pairs (optional)</td> <td><code>Accept: application/json</code></td> <td><code>((.*:.*\n)*)</code></td> </tr> <tr> <td>Request body (optional)</td> <td><code>{"result": "something"}</code></td> <td><code>((.&#124;\n)*)</code></td> </tr> <tr> <td>Response code</td> <td><code>HTTP/1.1 200 OK</code></td> <td><code>HTTP/1.1\s?([0-9]*)\s?.*\n</code></td> </tr> <tr> <td>Response key-value header pairs</td> <td></td> <td><code>((.*:.*\n)*)</code></td> </tr> <tr> <td>Response body (optional)</td> <td></td> <td><code>((.&#124;\n)*)</code></td> </tr> </tbody> </table> <p>Before we implement this regex in GoLang, we first define some useful utility functions</p> <p>First our headers capture group <code>((.*:.*\n)*)</code> is just a dump of <code>(.*:.*\n)</code> groups, so we need to convert this into a map</p> <pre><code class=language-go>import &quot;strings&quot;
+
+func parseHeaders(headers string) map[string]string {
+    ret := make(map[string]string)
+    for _, header_line := range strings.Split(headers, &quot;\n&quot;) {
+        header_part := strings.Split(header_line, &quot;:&quot;)
+        if len(header_part) != 2 {
+            continue
+        }
+        ret[strings.ToLower(strings.TrimSpace(header_part[0]))] = strings.ToLower(strings.TrimSpace(header_part[1]))
+    }
+    return ret
+}
+</code></pre> <p>Next, This <code>MatchGroup</code> type is a simple wrapper over GoLang's standard type <a href=https://pkg.go.dev/regexp><code>regexp.Regexp</code></a>. The purpose of this wrapper is just to make using the package a slight easier with the named capture groups.</p> <pre><code class=language-go>import (
+    &quot;regexp&quot;
+    &quot;strings&quot;
+)
+
+type MatchGroup struct {
+    matches []string
+    re *regexp.Regexp
+}
+
+func (m *MatchGroup) Get(key string) string {
+    return strings.TrimSpace(m.matches[m.re.SubexpIndex(key)])
+}
+
+func (m *MatchGroup) Match(target string) bool {
+    if m.re.MatchString(target) {
+        m.matches = m.re.FindStringSubmatch(target)
+        return true
+    } else {
+        return false
+    }
+}
+</code></pre> <p>Now we can parse our HTTP file using the structure we discussed into the <code>HttpTestCase</code> type we defined earlier</p> <pre><code class=language-go>import (
+    &quot;bytes&quot;
+    &quot;io/ioutil&quot;
+    &quot;log&quot;
+    &quot;net/http&quot;
+    &quot;regexp&quot;
+    &quot;strconv&quot;
+)
+
+func parse_http_file(fname string) *HttpTestCase {
+
+    file, err := ioutil.ReadFile(fname)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // I just concatenated the patterns in the table above here
+    // and gave the important capture groups some names with the ?P&lt;Name&gt; syntax
+    http_file_format := regexp.MustCompile(`^(?P&lt;Method&gt;GET|POST|PUT|DELETE)\s+(?P&lt;URL&gt;[^\s]*)\s?(HTTP/1.1)?\n(?P&lt;ReqHeader&gt;(.*:.*\n)*)(?P&lt;ReqBody&gt;(.|\n)*)HTTP/1.1\s?(?P&lt;StatusCode&gt;[0-9]*)\s?.*\n(?P&lt;RespHeader&gt;(.*:.*\n)*)(?P&lt;RespBody&gt;(.|\n)*)`)
+
+    // Matching and Getting
+    tc := &amp;HttpTestCase{Name: fname}
+    mg := &amp;MatchGroup{re: http_file_format}
+
+    if mg.Match(string(file)) {
+        reqBody := []byte(mg.Get(&quot;ReqBody&quot;))
+        tc.Request, _ = http.NewRequest(mg.Get(&quot;Method&quot;), mg.Get(&quot;URL&quot;), bytes.NewBuffer(reqBody))
+
+        for k,v := range parseHeaders(mg.Get(&quot;ReqHeader&quot;)) {
+            tc.Request.Header.Set(k,v)
+        }
+
+        tc.Expected.StatusCode, _ = strconv.Atoi(mg.Get(&quot;StatusCode&quot;))
+        tc.Expected.Headers = parseHeaders(mg.Get(&quot;RespHeader&quot;))
+        tc.Expected.Body = mg.Get(&quot;RespBody&quot;)
+    }
+    return tc
+}
+</code></pre> <h3 id=3-walk-dir-for-http-files>3. Walk Dir for HTTP Files</h3> <p>{{&lt; tldr "Recursively walk through a directory to find all <code>.http</code> files" &gt;}}</p> <p>For walking over a directory and finding all files with an extension, I'll shamelessly grab a <a href=https://stackoverflow.com/questions/55300117/how-do-i-find-all-files-that-have-a-certain-extension-in-go-regardless-of-depth>StackOverflow answer by Tim Cooper</a> (Thanks, Tim):</p> <pre><code class=language-go>import &quot;path/filepath&quot;
+
+func WalkMatch(root, pattern string) ([]string, error) {
+    var matches []string
+    err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return err
+        }
+        if info.IsDir() {
+            return nil
+        }
+        if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
+            return err
+        } else if matched {
+            matches = append(matches, path)
+        }
+        return nil
+    })
+    if err != nil {
+        return nil, err
+    }
+    return matches, nil
+}
+</code></pre> <h2 id=putting-it-all-together>Putting it all together</h2> <p>We put this all together in a main function which accepts a <code>-t</code> flag for the directory containing our tests:</p> <pre><code class=language-go>import (
+    &quot;flag&quot;
+    &quot;fmt&quot;
+    &quot;net/http&quot;
+    &quot;os&quot;
+)
+
+func main() {
+    testFiles := flag.String(&quot;t&quot;, &quot;./data/&quot;, &quot;path to test files&quot;)
+    flag.Parse()
+
+    client := &amp;http.Client{}
+    n_err := 0
+    files, _ := WalkMatch(*testFiles, &quot;*.http&quot;)
+    for _, file := range files {
+        tc := parse_http_file(file)
+        if ok := tc.Test(client); !ok {
+            n_err += 1
+        }
+    }
+
+    if n_err &gt; 0 {
+        fmt.Printf(&quot;\n\n%d Errors caught\n&quot;, n_err)
+        os.Exit(1)
+    } else {
+        os.Exit(0)
+    }
+}
+</code></pre> <h2 id=demonstration>Demonstration</h2> <p>Here are the complete files for this demo:</p> <ul> <li><a href=/blog/golang-api-test/test.go>test.go</a>, a compilation of what we just went through</li> <li><a href=/blog/golang-api-test/demoservice.go>demoservice.go</a>, a basic HTTP server to test</li> <li><a href=/blog/golang-api-test/200.http>tests/200.http</a>, a 200-OK API test</li> <li><a href=/blog/golang-api-test/400.http>tests/400.http</a>, a 400-BAD-REQUEST API test</li> </ul> <p>Usage:</p> <pre><code class=language-bash>go run demoservice.go
+
+go run test.go -t tests/
+</code></pre> <h3 id=the-demo-files>The demo Files</h3> <h4 id=demoservicego><code>demoservice.go</code></h4> <p>This exposes the <code>GET /hello</code> endpoint, and expects the header <code>Accept: text/plain</code> or it will throw a <code>HTTP 400 BAD-REQUEST</code>:</p> <pre><code class=language-go>package main
+
+import (
+    &quot;net/http&quot;
+    &quot;github.com/go-chi/chi/v5&quot;
+)
+
+func main() {
+    r := chi.NewRouter()
+
+    r.Get(&quot;/hello&quot;, func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set(&quot;Request-Id&quot;, &quot;Some-Request-ID&quot;)
+        w.Header().Set(&quot;Service-Name&quot;, &quot;Demo&quot;)
+
+        accept := r.Header.Get(&quot;Accept&quot;)
+        if accept != &quot;text/plain&quot; {
+            w.WriteHeader(400)
+            w.Write([]byte(&quot;Must set accept to text/plain&quot;))
+            return
+        }
+        w.Write([]byte(&quot;Hello, World!&quot;))
+    })
+
+    http.ListenAndServe(&quot;:3000&quot;, r)
+}
+</code></pre> <h4 id=tests200http><code>tests/200.http</code></h4> <pre><code class=language-http>GET http://localhost:3000/hello HTTP/1.1
+Accept: text/plain
+
+
+HTTP/1.1 200 OK
+Request-Id: Some-Request-ID
+Service-Name: Demo
+
+Hello, World!
+</code></pre> <h4 id=tests400http><code>tests/400.http</code></h4> <pre><code class=language-http>GET http://localhost:3000/hello HTTP/1.1
+Accept: application/json
+
+
+HTTP/1.1 400 Bad Request
+Request-Id: Some-Request-ID
+Service-Name: Demo
+
+Must set accept to text/plain
+</code></pre> <h4 id=testgo><code>test.go</code></h4> <pre><code class=language-go>package main
+
+import (
+    &quot;bytes&quot;
+    &quot;flag&quot;
+    &quot;log&quot;
+    &quot;fmt&quot;
+    &quot;os&quot;
+    &quot;path/filepath&quot;
+    &quot;net/http&quot;
+    &quot;regexp&quot;
+    &quot;io/ioutil&quot;
+    &quot;strings&quot;
+    &quot;strconv&quot;
+)
+
+func main() {
+    testFiles := flag.String(&quot;t&quot;, &quot;./data/&quot;, &quot;path to test files&quot;)
+    flag.Parse()
+
+    client := &amp;http.Client{}
+    n_err := 0
+    files, _ := WalkMatch(*testFiles, &quot;*.http&quot;)
+    for _, file := range files {
+        tc := parse_http_file(file)
+        if ok := tc.Test(client); !ok {
+            n_err += 1
+        }
+    }
+
+    if n_err &gt; 0 {
+        fmt.Printf(&quot;\n\n%d Errors caught\n&quot;, n_err)
+        os.Exit(1)
+    } else {
+        os.Exit(0)
+    }
+}
+
+type HttpTestCase struct {
+    Name string
+    Request *http.Request
+    Expected struct {
+        StatusCode int
+        Headers map[string]string
+        Body string
+    }
+}
+
+func (tc *HttpTestCase) Pass() bool {
+    fmt.Printf(&quot;✓ API:%s\n&quot;, tc.Name)
+    return true
+}
+
+func (tc *HttpTestCase) Fail(reason string, expected interface{}, actual interface{}) bool {
+    fmt.Printf(&quot;✘ %s: Failed because '%s'\n\tExpected: '%v'\n\tActual: '%v'\n&quot;, tc.Name, reason, expected, actual)
+    return false
+}
+
+func (tc *HttpTestCase) Test(client *http.Client) bool {
+    if tc.Request == nil {
+        return tc.Fail(&quot;Could not parse test case&quot;, &quot;&quot;, &quot;&quot;)
+    }
+
+    resp, _ := client.Do(tc.Request)
+
+    if resp.StatusCode != tc.Expected.StatusCode {
+        return tc.Fail(&quot;Incorrect status code&quot;, tc.Expected.StatusCode, resp.StatusCode)
+    }
+
+    for header, expected := range tc.Expected.Headers {
+        if actual := strings.ToLower(resp.Header.Get(header)); actual != expected {
+            return tc.Fail(&quot;Header mismatch for &quot; + header, expected, actual)
+        }
+    }
+
+    if tc.Expected.Body != &quot;&quot; {
+        bodyBytes, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+            return tc.Fail(&quot;Failed to parse body&quot;, tc.Expected.Body, &quot;&quot;)
+        }
+        actualBody := strings.TrimSpace(string(bodyBytes))
+        if actualBody != tc.Expected.Body {
+            return tc.Fail(&quot;Body does not match&quot;, tc.Expected.Body, actualBody)
+        }
+    }
+
+    return tc.Pass()
+}
+
+func parseHeaders(headers string) map[string]string {
+    ret := make(map[string]string)
+    for _, header_line := range strings.Split(headers, &quot;\n&quot;) {
+        header_part := strings.Split(header_line, &quot;:&quot;)
+        if len(header_part) != 2 {
+            continue
+        }
+        ret[strings.ToLower(strings.TrimSpace(header_part[0]))] = strings.ToLower(strings.TrimSpace(header_part[1]))
+    }
+    return ret
+}
+
+type MatchGroup struct {
+    matches []string
+    re *regexp.Regexp
+}
+
+func (m *MatchGroup) Get(key string) string {
+    return strings.TrimSpace(m.matches[m.re.SubexpIndex(key)])
+}
+
+func (m *MatchGroup) Match(target string) bool {
+    if m.re.MatchString(target) {
+        m.matches = m.re.FindStringSubmatch(target)
+        return true
+    } else {
+        return false
+    }
+}
+
+func parse_http_file(fname string) *HttpTestCase {
+
+    file, err := ioutil.ReadFile(fname)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // I just concatenated the patterns in the table above here
+    // and gave the important capture groups some names with the ?P&lt;Name&gt; syntax
+    http_file_format := regexp.MustCompile(`^(?P&lt;Method&gt;GET|POST|PUT|DELETE)\s+(?P&lt;URL&gt;[^\s]*)\s?(HTTP/1.1)?\n(?P&lt;ReqHeader&gt;(.*:.*\n)*)(?P&lt;ReqBody&gt;(.|\n)*)HTTP/1.1\s?(?P&lt;StatusCode&gt;[0-9]*)\s?.*\n(?P&lt;RespHeader&gt;(.*:.*\n)*)(?P&lt;RespBody&gt;(.|\n)*)`)
+
+    // Matching and Getting
+    tc := &amp;HttpTestCase{Name: fname}
+    mg := &amp;MatchGroup{re: http_file_format}
+
+    if mg.Match(string(file)) {
+        reqBody := []byte(mg.Get(&quot;ReqBody&quot;))
+        tc.Request, _ = http.NewRequest(mg.Get(&quot;Method&quot;), mg.Get(&quot;URL&quot;), bytes.NewBuffer(reqBody))
+
+        for k,v := range parseHeaders(mg.Get(&quot;ReqHeader&quot;)) {
+            tc.Request.Header.Set(k,v)
+        }
+
+        tc.Expected.StatusCode, _ = strconv.Atoi(mg.Get(&quot;StatusCode&quot;))
+        tc.Expected.Headers = parseHeaders(mg.Get(&quot;RespHeader&quot;))
+        tc.Expected.Body = mg.Get(&quot;RespBody&quot;)
+    }
+    return tc
+}
+
+func WalkMatch(root, pattern string) ([]string, error) {
+    var matches []string
+    err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return err
+        }
+        if info.IsDir() {
+            return nil
+        }
+        if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
+            return err
+        } else if matched {
+            matches = append(matches, path)
+        }
+        return nil
+    })
+    if err != nil {
+        return nil, err
+    }
+    return matches, nil
+}
+</code></pre>

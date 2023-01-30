@@ -1,0 +1,347 @@
+<h1 id=understanding-pythons-wsgi>Understanding Python's WSGI.</h1> <p>In this post, I'm going to show you the low-level workings of a web server in Python, and how Python's WSGI specification helps us separate server logic from application logic.</p> <p>We're going to get into the nitty-gritty and build a web server with just the low-level socket system calls.</p> <p>You can see our server code here (only for demonstration): <a href=/blog/7/servr.py>📑 servr.py</a></p> <p>Then, I'll quickly go through some key points in CPython's implementation of <code>HTTPServer</code> and its WSGI reference implementation to show you how a real server works.</p> <div class=toc><span class=toctitle>Contents</span><ul> <li><a href=#understanding-pythons-wsgi>Understanding Python's WSGI.</a><ul> <li><a href=#a-quick-definition>A quick definition</a></li> <li><a href=#web-servers>Web servers</a><ul> <li><a href=#a-quick-review-on-sockets>A quick review on sockets</a></li> <li><a href=#a-primitive-web-server>A primitive web server</a></li> <li><a href=#selectors>Selectors</a></li> <li><a href=#parsing-the-request>Parsing the request</a></li> </ul> </li> <li><a href=#adding-application-logic-with-wsgi-finally>Adding application logic with WSGI (finally)...</a><ul> <li><a href=#application-requirements-in-wsgi>Application requirements in WSGI</a></li> <li><a href=#server-requirements-in-wsgi>Server requirements in WSGI</a></li> </ul> </li> <li><a href=#an-actual-wsgi-server-in-cpython>An actual WSGI Server in CPython</a><ul> <li><a href=#class-hierarchy>Class Hierarchy</a></li> <li><a href=#setting-up-the-sockets-making-the-server>Setting up the sockets &amp; making the server</a></li> <li><a href=#handling-the-request>Handling the request</a></li> </ul> </li> <li><a href=#references>References</a></li> </ul> </li> </ul> </div> <h2 id=a-quick-definition>A quick definition</h2> <p>{{&lt; tldr "WSGI is a standard to specify how servers should interact with Python web applications (e.g. Flask)"</p> <blockquote> <p>}}</p> </blockquote> <p>WSGI (Web Server Gateway Interface) is an interface specification (read “standard”) detailing how servers and applications communicate. That is to say, WSGI is not any kind of software, but rather a document to specify how things should behave.</p> <p>WSGI is defined in <a href=https://peps.python.org/pep-3333/ >PEP 3333: Python Web Server Gateway Interface v1.0.1</a>[^pe1].</p> <p>Pragmatically speaking, this allows us to separate the server HTTP handling logic, with the application logic. For example, if we had a simple Flask app:</p> <pre><code class=language-py># app.py
+
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route(&quot;/&quot;)
+def index():
+    return &quot;Hello world\n&quot;
+</code></pre> <p>Then we can opt to use our own WSGI server, as opposed to Flask's default Werkzeug WSGI web server:</p> <pre><code class=language-py># servr.py
+
+from app import app
+
+if __name__ == '__main__':
+    from wsgiref.simple_server import make_server
+    server = make_server('localhost', 4000, app)
+    server.handle_request()
+</code></pre> <p>Here, we are using the <a href=https://docs.python.org/3/library/wsgiref.html>built-in reference implementation for WSGI servers</a>[^py1] and handling just one single request before exiting.</p> <p>WSGI is the specification that allows for this 'plug-and-play' behaviour through standardized interfaces between WSGI applications (such as Flask and Django) and WSGI servers (Werkzeug, Gunicorn, uWSGI, etc.).</p> <h2 id=web-servers>Web servers</h2> <p>{{&lt; tldr "Servers handle HTTP requests. We'll see how to implement a basic echo-server with low-level Sockets..."</p> <blockquote> <p>}}</p> </blockquote> <p>To fully appreciate WSGI, we first need to go through some basics of web servers. <strong>But quickly, a clarification on nomenclature...</strong></p> <p>In most modern contexts, “web server” and “app server” are interchangeable terms, and colloquially refer to a server that responds to web requests.</p> <p>However, in the context of WSGI, these two terms are different and WSGI is the interface between the web server (or "gateway") and the app server (or "framework").</p> <p>Broadly, and very simply:</p> <ul> <li><strong>Web servers</strong> <em>accepts and fulfill client requests for static content (files stored on the server).</em> That is, their primary responsibility is simply to handle the incoming HTTP requests, and respond with a fixed (-static) response.</li> <li><strong>App servers</strong> <em>generate those files on the fly.</em> That is, application server extend that capability by generating dynamic content based on business logic.</li> </ul> <h3 id=a-quick-review-on-sockets>A quick review on sockets</h3> <p>{{&lt; tldr "Sockets are the abstractions for network communication."</p> <blockquote> <p>}}</p> </blockquote> <p>{{&lt; info &gt;}} All of the code below is only for demonstration purposes, and will be missing a lot of crucial case &amp; error handling! Their logic has been stripped down to the absolute bare minimum! {{&lt; /info &gt;}}</p> <p>I highly recommend reading <a href=https://beej.us/guide/bgnet/ >Beej's Guide to Network Programming</a>[^be1] if you want to know more, but <strong>very</strong> generally:</p> <ul> <li>Sockets are file descriptors that serve as endpoints for sending data across a network.</li> <li> <p>The most basic server will have a 4 step process with corresponding socket system-calls:</p> <ol> <li><code>socket()</code>: Create the socket descriptor</li> <li><code>bind()</code>: Bind the socket for communication with an IP address and port</li> <li><code>listen()</code>: mark a socket as passive as to indicate it will be used to accept incoming connection requests</li> <li><code>accept()</code>: Get the next connection request on the listen queue</li> </ol> </li> </ul> <p>To implement this in Python, we use the low-level networking interface <a href=https://docs.python.org/3/library/socket.html><code>Lib/socket.py</code></a>[^py2]</p> <pre><code class=language-py># single_socket.py
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind(('', 8082))
+    s.listen()
+
+    c, _ = s.accept()
+    print(
+        c.recv(1024).decode(&quot;utf-8&quot;)
+    )
+    c.close()
+
+</code></pre> <p>Here, we created an IPv4 (<code>AF_INET</code>) TCP socket (<code>SOCK_STREAM</code>). We then bound it to all available connections on the host machine on port 8082, and marked it to <code>.listen()</code> for inbound connections.</p> <p>We then <code>.accept()</code> to get the first connection request on the queue and <code>.recv()</code> / read 1024 bytes, which we then <code>print()</code>-ed.</p> <p>You can run this with:</p> <pre><code class=language-bash>➜ python single_socket.py &amp;
+#    [1] 47611
+
+➜ curl localhost:8082
+#    GET / HTTP/1.1
+#    Host: localhost:8082
+#    User-Agent: curl/7.77.0
+#    Accept: */*
+#
+#    curl: (52) Empty reply from server
+#    [1]  + 47611 done       python single_socket.py
+</code></pre> <h3 id=a-primitive-web-server>A primitive web server</h3> <p>{{&lt; tldr "Using select() to multiplex multiple connections in an infinite loop..."</p> <blockquote> <p>}}</p> </blockquote> <p>Of course accepting one single request and terminating doesn't make for a very useful web server (<em>not that the following code will be any more useful...</em>).</p> <p>We can modify this basic logic to create a server that keeps accepting requests in an infinite loop.</p> <p>But in order to do that, we need to make some key changes!</p> <ul> <li>We need to make sure the sockets don't block (see <code>(2)</code>)</li> <li>We need to multiplex the multiple connections with a selector (see <code>(3)</code>, explained in <a href='{{< relref "#selectors" >}}'>#selectors</a>)</li> </ul> <pre><code class=language-py># servr.py
+
+import socket
+import selectors
+
+# (1) Init socket, allow reuse address (SO_REUSEADDR)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(('', 8082))
+s.listen(10)
+
+# (2) Don't block
+s.setblocking(False)
+
+# (3) Use a selector
+sel = selectors.DefaultSelector()
+
+# Called when server socket has something to accept
+def accept(sock):
+    conn, _ = sock.accept()
+    conn.setblocking(False)
+    sel.register(conn, selectors.EVENT_READ, read)
+
+# Called when client socket has data to .recv()
+def read(conn):
+    data = conn.recv(1024).decode(&quot;utf-8&quot;)
+    if data:
+        print(data)
+    else:
+        sel.unregister(conn)
+        conn.close()
+
+# (3a) Register socket and monitor read events
+sel.register(s, selectors.EVENT_READ, accept)
+
+try:
+    while True:
+        events = sel.select()
+        for key, mask in events:
+            callback = key.data     # (4) Callback
+            callback(key.fileobj)
+finally:
+    sel.close()
+</code></pre> <p>Now, when we run this with <code>python servr.py</code>, we can repeatedly hit the server with <code>curl localhost:8082/hello/world</code> and it won't shutdown.</p> <ol> <li>We've kept the same socket initialisation code, but moved it out of a <code>with</code> context so that we don't close it. Also note <code>.setsockopt()</code> to set <code>SO_REUSEADDR=1</code>, allowing reuse of bound ports.</li> <li>We configure the socket to be non-blocking</li> <li>Our <code>sel</code> Selector will monitor the socket and respond to read events. With the <code>accept</code> method registered (see (a)) to the event we can call the callback on read events, which in turn registers the <code>read</code> callback for the client socket connections.</li> <li>This is where we respond to the read events and call the callbacks. The <code>register(_,_,data)</code> accepts information to pass around with the event, accessible via <code>key.data</code>.</li> </ol> <h3 id=selectors>Selectors</h3> <p>The key change here is that we're using Python's I/O multiplexing <a href=https://docs.python.org/3/library/selectors.html><code>Lib/selectors.py</code></a>[^py3]. This is the Python API for the <a href=https://man7.org/linux/man-pages/man2/select.2.html>unix system-call <code>select()</code></a>, in which...</p> <p>{{&lt; blockquote name="man7.org" link="https://man7.org/linux/man-pages/man2/select.2.html" &gt;}} select() allows a program to monitor multiple file descriptors, waiting until one or more of the file descriptors become "ready" for some class of I/O operation (e.g., input possible). A file descriptor is considered ready if it is possible to perform a corresponding I/O operation (e.g., read(2), or a sufficiently small write(2)) without blocking. {{&lt; /blockquote &gt;}}</p> <p>It's important to remember that <strong>Sockets are File Descriptors</strong>. From the point-of-view of Python, this means that the registered Socket is a buffer-like descriptor, and the selector can monitor <code>EVENT_READ</code> and <code>EVENT_WRITE</code> events by monitoring the buffers (and not by responding to client request events, or anything network related... i.e. it is purely I/O).</p> <h3 id=parsing-the-request>Parsing the request</h3> <p>We'll quickly wrap up this section by parsing the raw binary request into something useful (pretty self-explanatory, hopefully):</p> <pre><code class=language-py># servr.py
+
+# ...
+
+def read(conn):
+    data = conn.recv(1024)
+    if data:
+        handle_request(data)
+    else:
+        sel.unregister(conn)
+        conn.close()
+
+def handle_request(raw_request):
+
+    # RFC 2616 Sect. 2.2:
+    #   &quot;HTTP/1.1 defines the sequence CR LF as the end-of-line
+    #    marker for all protocol elements except the entity-body&quot;
+    request_lines = list(map(str.strip, raw_request.decode(&quot;utf-8&quot;).split('\r\n')))
+
+    # RFC 2616 Sect. 5.1:
+    #   &quot;Request-Line   = Method SP Request-URI SP HTTP-Version CRLF&quot;
+    method, path, version = list(map(str.strip, request_lines.pop(0).split()))
+
+    # RFC 2616 Sect. 4.2:
+    #   &quot;Each header field consists of a name followed by a
+    #   colon (&quot;:&quot;) and the field value. Field names are case-insensitive.
+    headers = {
+        x[0].lower(): x[1]
+        for x in map(
+            lambda x: [x.strip() for x in x.split(&quot;:&quot;)],
+            request_lines[:request_lines.index(&quot;&quot;)]
+        )
+    }
+    body = request_lines[request_lines.index(&quot;&quot;)+1].strip()
+
+    print(f&quot;method={method}, path={path}, headers={headers}, body={body}&quot;)
+</code></pre> <p>N.b. see RFC 2616[^rf1] for details on the HTTP message format, in particular <a href=https://www.rfc-editor.org/rfc/rfc2616#section-4>section 4. HTTP Messsage</a>.</p> <h2 id=adding-application-logic-with-wsgi-finally>Adding application logic with WSGI (finally)...</h2> <p>So, we have a web server that can accept requests, but how do we get the server to leverage our Flask app?</p> <p>Let's dive into the WSGI spec in PEP-3333[^pe1]:</p> <h3 id=application-requirements-in-wsgi>Application requirements in WSGI</h3> <p>{{&lt; blockquote name="PEP 3333" link="https://peps.python.org/pep-3333/"&gt;}} The WSGI interface has two sides: the “server” or “gateway” side, and the “application” or “framework” side. The server side invokes a callable object that is provided by the application side...</p> <p><br> <br> ...[on the Application/Framework side, t]he application object is simply a callable object that accepts two arguments... {{&lt; /blockquote &gt;}}</p> <p>Essentially, an application framework must define a callable object that accepts <code>environ: dict</code> and <code>start_response: Callable</code>. For example:</p> <pre><code class=language-py>def simple_app(environ, start_response):
+    &quot;&quot;&quot;Simplest possible application object&quot;&quot;&quot;
+    status = '200 OK'
+    response_headers = [('Content-type', 'text/plain')]
+    start_response(status, response_headers)
+    return [b&quot;Hello world!\n&quot;]
+</code></pre> <p>Web frameworks like Django and Flask do this for you. For example, you can see this in <a href=https://github.com/pallets/flask/blob/main/src/flask/app.py#L2081-L2086>Flask <code>src/flask/app.py</code> Lines #2081-2086</a>[^gi1]:</p> <pre><code class=language-py># pallets/flask  src/flask/app.py
+
+class Flask(Scaffold):
+
+    # ...
+
+    # L2081-L2086
+    def __call__(self, environ: dict, start_response: t.Callable) -&gt; t.Any:
+        &quot;&quot;&quot;The WSGI server calls the Flask application object as the
+        WSGI application. This calls :meth:`wsgi_app`, which can be
+        wrapped to apply middleware.
+        &quot;&quot;&quot;
+        ...
+</code></pre> <h3 id=server-requirements-in-wsgi>Server requirements in WSGI</h3> <p>{{&lt; blockquote name="PEP 3333" link="https://peps.python.org/pep-3333/"&gt;}} ...[on the Server/Gateway side, t]he server or gateway invokes the application callable once for each request it receives from an HTTP client, that is directed at the application. <br> <br></p> <p>[1]...<br> ... The <code>environ</code> dictionary is required to contain [...] CGI environment variables, as defined by the Common Gateway Interface specification... <br> <br></p> <p>[2]...<br> ...The second parameter passed to the application object is a callable of the form <code>start_response(status, response_headers, exc_info=None)</code>... The <code>start_response</code> callable is used to begin the HTTP response, and it must return a write(body_data) callable {{&lt; /blockquote &gt;}}</p> <p>Put simply, the server/gateway must:</p> <ol> <li>populate an <code>environ: Dict</code> containing CGI variables that will be used by the application (e.g. <code>REQUEST_METHOD</code>),</li> <li>define a <code>start_response</code> method which begins the HTTP response</li> <li>Call the application object (e.g. the Flask app) with the above two arguments</li> </ol> <p>Modifying our existing web server from the last section to fit these requirements:</p> <pre><code class=language-py># servr.py
+
+# ...
+
+application = # Our flask app here
+
+def handle_request(raw_request):
+    # ...
+
+    # print(f&quot;method={method}, path={path}, headers={headers}, body={body}
+
+    environ = {
+        &quot;wsgi.url_scheme&quot;: 'http',
+        &quot;REQUEST_METHOD&quot;: method,
+        &quot;PATH_INFO&quot;: path,
+    }
+
+    write = lambda data: print(data)
+    start_response = lambda status, response_headers, exc_info=None: write
+
+    result = application(environ, start_response)
+    try:
+        for data in result:
+            write(data)
+    finally:
+        if hasattr(result, 'close'):
+            result.close()
+</code></pre> <p>And when we run our server now, we can see the Flask app correctly routing requests.</p> <p>The full code is found here <a href=/blog/7/servr.py>📑 servr.py</a></p> <pre><code class=language-bash>python servr.py &amp;
+
+curl localhost:8082/hello/world
+# b'&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 3.2 Final//EN&quot;&gt;\n&lt;title&gt;404 Not Found&lt;/title&gt;\n&lt;h1&gt;Not Found&lt;/h1&gt;\n&lt;p&gt;The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.&lt;/p&gt;\n'
+
+curl localhost:8082/
+# b'Hello world\n'
+</code></pre> <p>Of course, there is <strong>much</strong> more to implement to make this a properly functional server. But hopefully, this shows you the basis of how WSGI works.</p> <h2 id=an-actual-wsgi-server-in-cpython>An actual WSGI Server in CPython</h2> <p>Now -- armed with the knowledge of how WSGI servers interact with applications -- let's look at the reference implementation to see a proper WSGI server.</p> <p>We'll be looking at <a href=https://github.com/python/cpython/blob/main/Lib/wsgiref/simple_server.py>python/cpython <code>Lib/wsgiref/simple_server.py</code></a>, <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/http/server.py><code>Lib/http/server.py</code></a>, and <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/socketserver.py><code>Lib/socketserver.py</code></a>[^gi2].</p> <p>Recall, with the WSGI reference server, we can create a web server like so:</p> <pre><code class=language-py># Application/Framework
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route(&quot;/&quot;)
+def index():
+    return &quot;Hello world\n&quot;
+
+# Server/Gateway
+if __name__ == '__main__':
+    from wsgiref.simple_server import make_server
+    server = make_server('localhost', 4000, app)
+    server.handle_request()
+</code></pre> <p>An overview of what's going on under the hood:</p> <ol> <li>In this implementation, the server calls <code>wsgiref.simple_server.make_server(_,_,app)</code> passing the WSGI application (e.g. our Flask app) as a positional argument.</li> <li>The reference implementation then instantiates the <code>wsgiref.simple_server.WSGIServer</code> class, and binds the application as an attribute.</li> <li> <p>The <code>wsgiref.simple_server.WSGIServer</code> will handle the sockets and process the incoming requests</p> <ul> <li>It inherits from <code>http.server.HTTPServer</code> and <code>socketserver.TCPServer</code> which handles the Sockets as we did</li> <li>The base class of these is <code>socketserver.BaseServer</code> which defines the methods that are to be called (e.g. <code>handle_request</code>)</li> </ul> </li> <li> <p>A handler class prototype <code>WSGIRequestHandler</code> is bound to the server and for every in-bound request, we will call that class to handle the request.</p> <ul> <li>This inherits from <code>http.server.BaseHTTPRequestHandler</code> which parses the HTTP requests from the raw binary (similar, but better, than what we did)</li> <li>This in turn inherits from <code>socketserver.StreamRequestHandler</code> which reads the sockets as files</li> <li><span style="color: #9013fe"><strong>This is where you will see the WSGI components we discussed (building the <code>environ</code> dictionary and passing the <code>start_response</code> callable)</strong></span>.</li> </ul> </li> </ol> <h3 id=class-hierarchy>Class Hierarchy</h3> <p>For your reference:</p> <pre><code>socketserver.BaseServer
+└── socketserver.TCPServer
+    └── http.server.HTTPServer
+        └── wsgiref.simple_server.WSGIServer
+
+socketserver.BaseRequestHandler
+└── socketserver.StreamRequestHandler
+    └── http.server.BaseHTTPRequestHandler
+        └── wsgiref.simple_server.WSGIRequestHandler
+</code></pre> <h3 id=setting-up-the-sockets-making-the-server>Setting up the sockets &amp; making the server</h3> <p>We start with <code>BaseServer</code> (<a href=https://github.com/python/cpython/blob/v3.10.2/Lib/socketserver.py#L153><code>Lib/socketserver.py</code></a>[^gi2]). This doesn't do much besides define the key API for the class. <a href=https://github.com/python/cpython/blob/main/Lib/socketserver.py#L263-L274>In particular, the <code>handle_request()</code> method</a> we will be using for incoming requests to our server.</p> <pre><code class=language-py># Lib/socketserver.py L#263
+
+    # The distinction between handling, getting, processing and finishing a
+    # request is fairly arbitrary.  Remember:
+    #
+    # - handle_request() is the top-level call.  It calls selector.select(),
+    #   get_request(), verify_request() and process_request()
+    # - get_request() is different for stream or datagram sockets
+    # - process_request() is the place that may fork a new process or create a
+    #   new thread to finish the request
+    # - finish_request() instantiates the request handler class; this
+    #   constructor will handle the request all by itself
+
+    def handle_request(self):
+        ...
+</code></pre> <p>We then extend <code>BaseServer</code> with <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/socketserver.py#L390><code>TCPServer</code></a>[^gi2] where we can see similar socket setup as we did in our demonstration server in the previous section.</p> <pre><code class=language-py># Lib/socketserver.py
+class TCPServer(BaseServer):
+    address_family = socket.AF_INET
+    socket_type = socket.SOCK_STREAM
+
+     def __init__(self, ...):
+         self.socket = socket.socket(self.address_family,
+                                    self.socket_type)
+
+        #...
+        if self.allow_reuse_address:
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        self.socket.bind(self.server_address)
+
+        #...
+        self.socket.listen(self.request_queue_size)
+
+    def get_request(self):
+        &quot;&quot;&quot;Get the request and client address from the socket.
+        May be overridden.
+        &quot;&quot;&quot;
+        return self.socket.accept()
+</code></pre> <p>From here, we define our <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/wsgiref/simple_server.py#L42><code>WSGIServer</code></a>[^gi2] (Omitted <code>HTTPServer(TCPServer)</code> because it doesn't do much):</p> <pre><code class=language-py># Lib/wsgiref/simple_server.py
+class WSGIServer(HTTPServer):
+
+    &quot;&quot;&quot;BaseHTTPServer that implements the Python WSGI protocol&quot;&quot;&quot;
+
+    application = None
+
+    def setup_environ(self):
+        # Set up base environment
+        env = self.base_environ = {}
+        env['SERVER_NAME'] = self.server_name
+        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+        env['SERVER_PORT'] = str(self.server_port)
+        env['REMOTE_HOST']=''
+        env['CONTENT_LENGTH']=''
+        env['SCRIPT_NAME'] = ''
+
+    def get_app(self):
+        return self.application
+
+    def set_app(self,application):
+        self.application = application
+</code></pre> <p>As you can see the <code>WSGIServer</code> just initializes the base <code>environ</code> dictionary, and exposes a getter &amp; setter for the application.</p> <p>So when the server calls <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/wsgiref/simple_server.py#L150><code>make_server(_,_,app)</code></a>:</p> <pre><code class=language-py># Lib/wsgiref/simple_server.py
+def make_server(
+    host, port, app, server_class=WSGIServer, handler_class=WSGIRequestHandler
+):
+    &quot;&quot;&quot;Create a new WSGI server listening on `host` and `port` for `app`&quot;&quot;&quot;
+    server = server_class((host, port), handler_class)
+    server.set_app(app)
+    return server
+</code></pre> <h3 id=handling-the-request>Handling the request</h3> <p>When a request comes to the server, we enter through the <code>handle_request()</code> method.</p> <p>In <code>BaseServer</code>, <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/socketserver.py#L273-L291>we see the selector pattern as before</a>, after which, it will eventually call the <code>finish_request</code> method and load up our request handler class</p> <pre><code class=language-py># Lib/socketserver.py
+class BaseServer:
+    def handle_request(self):
+        with _ServerSelector() as selector:
+            selector.register(self, selectors.EVENT_READ)
+            # ...
+
+    def finish_request(self, request, client_address):
+        &quot;&quot;&quot;Finish one request by instantiating RequestHandlerClass.&quot;&quot;&quot;
+        self.RequestHandlerClass(request, client_address, self)
+</code></pre> <p>The <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/socketserver.py#L723-L749><code>BaseRequestHandler</code></a>[^gi2] defines a basic API where derived classes override the <code>setup</code>, <code>handle</code> and <code>finish</code> methods:</p> <pre><code class=language-py># Lib/socketserver.py
+class BaseRequestHandler:
+    def __init__(self, request, client_address, server):
+        self.request = request
+        self.client_address = client_address
+        self.server = server
+        self.setup()
+        try:
+            self.handle()
+        finally:
+            self.finish()
+</code></pre> <p>For TCP sockets we use <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/socketserver.py#L769><code>StreamRequestHandler</code></a>[^gi2]. This class makes a file from the socket (<code>.makefile()</code>) as opposed to directly calling <code>.recv()</code> on the connection like we did in our demonstration server. These act as file objects for reading and writing to the socket connection:</p> <pre><code class=language-py># Lib/socketserver.py
+class StreamRequestHandler(BaseRequestHandler):
+    def setup(self):
+        self.connection = self.request
+        # ...
+        self.rfile = self.connection.makefile('rb', self.rbufsize)
+        # ...
+        self.wfile = self.connection.makefile('wb', self.wbufsize)
+</code></pre> <p>Next in the class hierarchy, the <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/http/server.py#L148><code>BaseHTTPRequestHandler</code></a>[^gi2] class that the WSGI handler derives from then does the heavy lifting for parsing the request from the binary socket data (much more extensively then we did...):</p> <pre><code class=language-py># Lib/http/server.py
+class BaseHTTPRequestHandler(socketserver.StreamRequestHandler):
+    def parse_request(self):
+        # ...
+        self.command, self.path = command, path
+</code></pre> <p>This <code>.parse_request()</code> method will be called directly by the <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/wsgiref/simple_server.py#L71><code>WSGIRequestHandler</code></a>[^gi2] which overrides the <code>.handle()</code> method called by the server for incoming requests.</p> <pre><code class=language-py># Lib/wsgiref/simple_server.py
+class WSGIRequestHandler(BaseHTTPRequestHandler):
+
+    def get_environ(self):
+
+        env = self.server.base_environ.copy()
+        # ...
+        env['REQUEST_METHOD'] = self.command
+        # ...
+        env['PATH_INFO'] = urllib.parse.unquote(path, 'iso-8859-1')
+        # ...
+        return env
+
+    def handle(self):
+        &quot;&quot;&quot;Handle a single HTTP request&quot;&quot;&quot;
+
+        # ...
+
+        self.parse_request()
+
+        handler = ServerHandler(
+            self.rfile, self.wfile, self.get_stderr(), self.get_environ(),
+            multithread=False,
+        )
+        handler.request_handler = self      # backpointer for logging
+        handler.run(self.server.get_app())
+</code></pre> <p>The <code>ServerHandler</code> is defined in the same package under <a href=https://github.com/python/cpython/blob/v3.10.2/Lib/wsgiref/handlers.py><code>Lib/wsgiref/handlers</code></a>[^gi2]</p> <pre><code class=language-py>class BaseHandler:
+
+    def run(self, application):
+        # ...
+        self.result = application(self.environ, self.start_response)
+        try:
+            for data in self.result:
+                self.write(data)
+            self.finish_content()
+        except:
+            # Call close() on the iterable returned by the WSGI application
+            # in case of an exception.
+            if hasattr(self.result, 'close'):
+                self.result.close()
+            raise
+        else:
+            self.close()
+
+    # ...
+    def start_response(self, status, headers,exc_info=None):
+        &quot;&quot;&quot;'start_response()' callable as specified by PEP 3333&quot;&quot;&quot;
+        ...
+</code></pre> <p>And there you can see the WSGI required call to <code>application(environ: Dict, start_response: Callable)</code>.</p> <h2 id=references>References</h2> <p>{{% citation ref="pe1" type="Standard" year="2020" author="P.J. Eby" title="PEP 3333 – Python Web Server Gateway Interface v1.0.1" url="https://peps.python.org/pep-3333/" %}}</p> <p>{{% citation ref="be1" type="Webpage" year="n.d." author="Beej" title="Beej's Guide to Network Programming" url="https://beej.us/guide/bgnet/" %}}</p> <p>{{% citation ref="rf1" type="Standard" year="1999" author="The Internet Society" title="RFC 2616: Hypertext Transfer Protocol -- HTTP/1.1" url="https://www.rfc-editor.org/rfc/rfc2616#section-4" %}}</p> <p>{{% citation ref="py1" type="Webpage" year="n.d." author="Python" title="wsgiref - WSGI Utilities and Reference Implementation" url="https://docs.python.org/3/library/wsgiref.html" %}}</p> <p>{{% citation ref="py2" type="Webpage" year="n.d." author="Python" title="socket - Low-level networking interface" url="https://docs.python.org/3/library/socket.html" %}}</p> <p>{{% citation ref="py3" type="Webpage" year="n.d." author="Python" title="selectors - High-level I/O multiplexing" url="https://docs.python.org/3/library/selectors.html" %}}</p> <p>{{% citation ref="gi1" type="Github" year="n.d." author="pallets" title="pallets/flask" url="https://github.com/pallets/flask" %}}</p> <p>{{% citation ref="gi2" type="Github" year="n.d." author="python" title="python/cpython" url="https://github.com/python/cpython" %}}</p>

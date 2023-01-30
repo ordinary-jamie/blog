@@ -1,10 +1,20 @@
 {
     "posts": [
         {
-            "ref": "dev/2",
+            "ref": "dev/8",
+            "title": "Teaching Python.",
+            "preview": "An early introduction to objects for a Python beginner tutorial.",
+            "date": "2022-11-04",
+            "section": "dev",
+            "tags": [
+                "python"
+            ]
+        },
+        {
+            "ref": "dev/7",
             "title": "Understanding Python's WSGI.",
             "preview": "A deep dive into Python's WSGI framework.",
-            "date": "2023-01-18",
+            "date": "2022-03-18",
             "section": "dev",
             "tags": [
                 "python",
@@ -13,13 +23,44 @@
         },
         {
             "ref": "test/1",
-            "title": "Sample.",
+            "title": "Black-Scholes Model.",
             "preview": "Sample Markdown testing.",
             "date": "2022-01-18",
             "section": "test",
             "tags": [
                 "python",
                 "economics"
+            ]
+        },
+        {
+            "ref": "dev/6",
+            "title": "Log4Shell.",
+            "preview": "A deep dive into the zero-day vulnerability \"Log4Shell\".",
+            "date": "2021-12-14",
+            "section": "dev",
+            "tags": [
+                "security"
+            ]
+        },
+        {
+            "ref": "dev/5",
+            "title": "GoLang script for API Testing.",
+            "preview": "A quick GoLang gist to do API testing against HTTP files.",
+            "date": "2021-08-29",
+            "section": "dev",
+            "tags": [
+                "testing",
+                "web"
+            ]
+        },
+        {
+            "ref": "dev/4",
+            "title": "SQL Server & Docker.",
+            "preview": "Setting up a persistent SQL Server Docker container.",
+            "date": "2021-07-06",
+            "section": "dev",
+            "tags": [
+                "devops"
             ]
         },
         {
@@ -36,13 +77,24 @@
     "tagRefs": {
         "python": [
             "test/1",
-            "dev/2"
+            "dev/8",
+            "dev/7"
         ],
         "economics": [
             "test/1"
         ],
+        "devops": [
+            "dev/4"
+        ],
         "web": [
-            "dev/2"
+            "dev/7",
+            "dev/5"
+        ],
+        "testing": [
+            "dev/5"
+        ],
+        "security": [
+            "dev/6"
         ],
         "networking": [
             "dev/3"
@@ -53,7 +105,11 @@
             "test/1"
         ],
         "dev": [
-            "dev/2",
+            "dev/8",
+            "dev/4",
+            "dev/7",
+            "dev/5",
+            "dev/6",
             "dev/3"
         ]
     }

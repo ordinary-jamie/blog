@@ -1,6 +1,6 @@
 ---
 id: 1
-title: Sample
+title: Black-Scholes Model
 date: 2022-01-18
 preview: |
   Sample Markdown testing
@@ -10,8 +10,6 @@ tags:
   - economics
 draft: false
 ---
-
-# Black-Scholes Model
 
 The **Black–Scholes** `/ˌblæk ˈʃoʊlz/` or **Black–Scholes–Merton model** is a mathematical model for the dynamics of a financial market containing derivative investment instruments. From the parabolic partial differential equation in the model, known as the [Black–Scholes equation](https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_equation), one can deduce the Black–Scholes formula, which gives a theoretical estimate of the price of European-style options and shows that the option has a unique price given the risk of the security and its expected return (instead replacing the security's expected return with the risk-neutral rate). The equation and model are named after economists [**Fischer Black**](https://en.wikipedia.org/wiki/Fischer_Black) and [**Myron Scholes**](https://en.wikipedia.org/wiki/Myron_Scholes); [**Robert C. Merton**](https://en.wikipedia.org/wiki/Robert_C._Merton), who first wrote an academic paper on the subject, is sometimes also credited.
 
