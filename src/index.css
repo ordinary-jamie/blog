@@ -5,7 +5,7 @@
 @layer base {
 
     h1 {
-        @apply font-serif tracking-tighter text-5xl text-sky-500;
+        @apply font-serif tracking-tight text-5xl text-sky-500;
     }
 
 }
