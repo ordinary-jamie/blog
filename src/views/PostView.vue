@@ -23,8 +23,15 @@ onUpdated(() => {
 })
 
 onMounted(async () => {
-    const res = await import(`/src/assets/${props.assetPath}.html?raw`);
-    html.value = res.default;
+
+    const splitName = props.assetPath.split('/');
+    if (splitName.length === 2) {
+        const res = await import(`@/assets/${splitName[0]}/${splitName[1]}.html?raw`);
+        html.value = res.default;
+    } else {
+        const res = await import(`@/assets/${props.assetPath}.html?raw`);
+        html.value = res.default;
+    }
 });
 
 </script>
@@ -33,6 +40,6 @@ onMounted(async () => {
     <div class="text-sm" v-html="html"></div>
 </template>
 
-<style lang="postcss" scoped src="/src/assets/post.css">
+<style lang="postcss" scoped src="@/assets/post.css">
 
 </style>
