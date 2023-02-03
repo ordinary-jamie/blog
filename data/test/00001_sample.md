@@ -119,14 +119,36 @@ class FrontMatter(BaseModel):
 ```
 
 
-# Extensions
+## Extensions
 
-## Callout notes
+### Callout notes
+
+```
+!note{Test callout}
+```
 
 !note{Test callout}
 
-## TLDR
+### Quotes
+
+```
+!quote[src='test', author='FDR']{
+    Some quote
+}
+```
+
+!quote[src='test', author='FDR']{
+    Some quote
+}
+
+### TLDR
+
+```
+!tldr{
+    Some summary text
+}
+```
 
 !tldr{
-    Define a test case type that has the HTTP request to make and the expected response. We define a method to compare the two here
+    Some summary text
 }

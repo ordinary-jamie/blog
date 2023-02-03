@@ -15,9 +15,9 @@ type: blog
 
 On 2021 November 26th, the Apache Log4j2 vulnerability dubbed "Log4Shell" was recorded on the CVE Database under [`CVE-2021-44228`](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-44228)[^nv1].
 
-{{< blockquote name="nvd.nist.gov" link="https://nvd.nist.gov/vuln/detail/CVE-2021-44228">}}
-Apache Log4j2 2.0-beta9 through 2.12.1 and 2.13.0 through 2.15.0 JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints...
-{{< /blockquote >}}
+!quote[src="https://nvd.nist.gov/vuln/detail/CVE-2021-44228", author="nvd.nist.gov"]{
+    Apache Log4j2 2.0-beta9 through 2.12.1 and 2.13.0 through 2.15.0 JNDI features used in configuration, log messages, and parameters do not protect against attacker controlled LDAP and other JNDI related endpoints...
+}
 
 It received mainstream news attention, partly due to its impact to popular services such as the game Minecraft, but primarily due to how widespread the vulnerability is and the ease in which attacks can be delivered.
 

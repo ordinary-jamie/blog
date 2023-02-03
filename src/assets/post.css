@@ -1,6 +1,8 @@
 @tailwind base;
 
 @layer base {
+    /* --------------------------------------------------------------------- */
+    /* Note callouts */
     :deep(.ext-callout-note) {
         @apply p-2 flex items-center
         text-slate-700
@@ -13,6 +15,26 @@
         @apply text-yellow-500 font-bold mr-2;
     }
 
+    /* --------------------------------------------------------------------- */
+    /* Quotes */
+    :deep(.ext-quote) {
+        @apply p-2 flex items-center px-16 mb-4
+        border-teal-400;
+
+        border-bottom-width: 0.5px;
+    }
+
+    :deep(.ext-quote p) {
+        @apply italic font-light text-teal-700;
+    }
+
+    :deep(.ext-quote-author *) {
+        @apply italic text-teal-700 font-bold mr-4;
+    }
+
+
+    /* --------------------------------------------------------------------- */
+    /* TLDR */
     :deep(.ext-tldr) {
         @apply p-2 flex items-center px-16 mb-4
         border-sky-400;
