@@ -117,3 +117,10 @@ class FrontMatter(BaseModel):
             v += "."
         return v
 ```
+
+
+# Extensions
+
+## Callout notes
+
+!note{Test callout}
