@@ -8,6 +8,7 @@ section: dev
 tags:
   - networking
 draft: false
+type: blog
 ---
 
 [TOC]

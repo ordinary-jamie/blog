@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import PostCard from '../components/PostCard.vue';
 import Select from '../components/Select.vue';
-import meta from '@/assets/meta.json'
+import meta from '@/assets/content/meta.json'
 
 const tags = Object.keys(meta.tagRefs);
 const sections = Object.keys(meta.sectionRefs);

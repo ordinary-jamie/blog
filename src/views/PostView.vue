@@ -25,8 +25,8 @@ onUpdated(() => {
 onMounted(async () => {
 
     const splitName = props.assetPath.split('/');
-    if (splitName.length === 2) {
-        const res = await import(`@/assets/${splitName[0]}/${splitName[1]}.html?raw`);
+    if (splitName.length === 3 && splitName[0] == "content") {
+        const res = await import(`@/assets/content/${splitName[1]}/${splitName[2]}.html?raw`);
         html.value = res.default;
     } else {
         const res = await import(`@/assets/${props.assetPath}.html?raw`);

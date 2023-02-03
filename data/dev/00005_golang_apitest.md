@@ -9,6 +9,7 @@ tags:
   - testing
   - web
 draft: false
+type: blog
 ---
 
 [TOC]

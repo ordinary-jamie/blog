@@ -8,6 +8,7 @@ section: dev
 tags:
   - devops
 draft: false
+type: blog
 ---
 
 [TOC]

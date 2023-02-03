@@ -3,5 +3,5 @@ import PostView from './PostView.vue';
 </script>
 
 <template>
-    <PostView assetPath="about" />
+    <PostView assetPath="content/about" />
 </template>

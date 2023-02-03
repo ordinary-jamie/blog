@@ -19,7 +19,7 @@ const router = createRouter({
     {
       path: '/posts/:section/:id(\\d+)',
       component: PostView,
-      props: route => ({ assetPath: `${route.params.section}/${route.params.id}` }),
+      props: route => ({ assetPath: `content/${route.params.section}/${route.params.id}` }),
     }
   ]
 })

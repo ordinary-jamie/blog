@@ -8,6 +8,7 @@ section: dev
 tags:
   - security
 draft: false
+type: blog
 ---
 
 [TOC]

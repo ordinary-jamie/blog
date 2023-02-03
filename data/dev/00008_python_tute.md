@@ -8,6 +8,7 @@ section: dev
 tags:
   - python
 draft: false
+type: blog
 ---
 
 I've recently been ask to teach Python to an audience with no experience in Software Development!

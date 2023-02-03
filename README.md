@@ -5,10 +5,10 @@
 ``` bash
 # Setup
 npm install
-pip install -r requirements.in
+pip install -r pymd/requirements.in
 
 # Generate HTML content from markdown
-python gen.py --data data --output src/assets --post-ext md
+python -m pymd --data data --output src/assets --post-ext md
 
 # Serve locally
 npm run dev

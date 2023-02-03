@@ -1,6 +1,17 @@
 {
     "posts": [
         {
+            "ref": "test/1",
+            "title": "Black-Scholes Model.",
+            "preview": "Sample Markdown testing.",
+            "date": "2023-01-18",
+            "section": "test",
+            "tags": [
+                "python",
+                "economics"
+            ]
+        },
+        {
             "ref": "dev/8",
             "title": "Teaching Python.",
             "preview": "An early introduction to objects for a Python beginner tutorial.",
@@ -8,6 +19,16 @@
             "section": "dev",
             "tags": [
                 "python"
+            ]
+        },
+        {
+            "ref": "dev/4",
+            "title": "SQL Server & Docker.",
+            "preview": "Setting up a persistent SQL Server Docker container.",
+            "date": "2021-07-06",
+            "section": "dev",
+            "tags": [
+                "devops"
             ]
         },
         {
@@ -22,27 +43,6 @@
             ]
         },
         {
-            "ref": "test/1",
-            "title": "Black-Scholes Model.",
-            "preview": "Sample Markdown testing.",
-            "date": "2022-01-18",
-            "section": "test",
-            "tags": [
-                "python",
-                "economics"
-            ]
-        },
-        {
-            "ref": "dev/6",
-            "title": "Log4Shell.",
-            "preview": "A deep dive into the zero-day vulnerability \"Log4Shell\".",
-            "date": "2021-12-14",
-            "section": "dev",
-            "tags": [
-                "security"
-            ]
-        },
-        {
             "ref": "dev/5",
             "title": "GoLang script for API Testing.",
             "preview": "A quick GoLang gist to do API testing against HTTP files.",
@@ -54,13 +54,13 @@
             ]
         },
         {
-            "ref": "dev/4",
-            "title": "SQL Server & Docker.",
-            "preview": "Setting up a persistent SQL Server Docker container.",
-            "date": "2021-07-06",
+            "ref": "dev/6",
+            "title": "Log4Shell.",
+            "preview": "A deep dive into the zero-day vulnerability \"Log4Shell\".",
+            "date": "2021-12-14",
             "section": "dev",
             "tags": [
-                "devops"
+                "security"
             ]
         },
         {
