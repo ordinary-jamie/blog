@@ -64,7 +64,9 @@ It's a pretty simple Go script, with three key components/steps:
 
 ### 1. Test Case Type in Go
 
-{{< tldr "Define a test case type that has the HTTP request to make and the expected response. We define a method to compare the two here" >}}
+!tldr{
+    Define a test case type that has the HTTP request to make and the expected response. We define a method to compare the two here
+}
 
 Our test type is a pretty simple; just a simple request, response container with a `Name string` for reporting:
 
@@ -147,7 +149,9 @@ func (tc *HttpTestCase) Test(client *http.Client) bool {
 
 ### 2. Parsing HTTP files
 
-{{< tldr "Define a parsing function that parses `.http` files into the test case type (with the `net/http` Request and expected response)">}}
+!tldr{
+    Define a parsing function that parses `.http` files into the test case type (with the `net/http` Request and expected response)
+}
 
 HTTP files can be broken down into 6 parts as described in the table. Each of these parts are
 sequential, one after the other in the file:
@@ -256,7 +260,9 @@ func parse_http_file(fname string) *HttpTestCase {
 
 ### 3. Walk Dir for HTTP Files
 
-{{< tldr "Recursively walk through a directory to find all `.http` files" >}}
+!tldr{
+    Recursively walk through a directory to find all `.http` files
+}
 
 For walking over a directory and finding all files with an extension, I'll shamelessly grab a [StackOverflow answer by Tim Cooper](https://stackoverflow.com/questions/55300117/how-do-i-find-all-files-that-have-a-certain-extension-in-go-regardless-of-depth) (Thanks, Tim):
 

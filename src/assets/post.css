@@ -3,7 +3,7 @@
 @layer base {
     :deep(.ext-callout-note) {
         @apply p-2 flex items-center
-        target:text-slate-700
+        text-slate-700
         bg-yellow-100 rounded-lg shadow-md
         border-l-8 border-l-yellow-400
         ring-yellow-200 ring-1;
@@ -11,6 +11,21 @@
 
     :deep(.ext-callout-note-label) {
         @apply text-yellow-500 font-bold mr-2;
+    }
+
+    :deep(.ext-tldr) {
+        @apply p-2 flex items-center px-16 mb-4
+        border-sky-400;
+
+        border-bottom-width: 0.5px;
+    }
+
+    :deep(.ext-tldr p) {
+        @apply text-sky-400 italic font-light;
+    }
+
+    :deep(.ext-tldr-label) {
+        @apply text-sky-400 font-bold italic mr-4;
     }
 }
 

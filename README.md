@@ -34,7 +34,6 @@ npm run dev
 - Pre-processor macros (python `md` extensions)
     - Figures
     - Citations
-    - TLDR
     - Blockquotes
     - Callouts (info)
 - Re-skin manual coloring

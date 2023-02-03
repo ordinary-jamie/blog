@@ -124,3 +124,9 @@ class FrontMatter(BaseModel):
 ## Callout notes
 
 !note{Test callout}
+
+## TLDR
+
+!tldr{
+    Define a test case type that has the HTTP request to make and the expected response. We define a method to compare the two here
+}
