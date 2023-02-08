@@ -129,7 +129,10 @@ class BlogFrontMatter(_FrontMatterBaseModel):
         meta["sectionRefs"][self.section].append(f"{self.section}/{self.id}")
 
     def render(self, body: typing.Any) -> str:
-        return md.convert_markdown_to_html(f"# {self.title}\n" + body)
+        return self._render_header() + md.convert_markdown_to_html(body)
+
+    def _render_header(self) -> str:
+        return f"<h1>{self.title}</h1>\n"
 
 
 class AboutFrontMatter(_FrontMatterBaseModel):
@@ -137,6 +140,9 @@ class AboutFrontMatter(_FrontMatterBaseModel):
 
     def get_asset_path(self, base_path: Path = Path(".")) -> Path:
         return base_path / "about.html"
+
+    def check_against_source(self, source: Path) -> None:
+        ...
 
     def update_meta(self, meta: dict) -> None:
         ...

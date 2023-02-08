@@ -3,20 +3,130 @@ import xml.etree.ElementTree as etree
 
 import htmlmin
 import markdown
+from markdown.blockprocessors import BlockProcessor
 from markdown.extensions.fenced_code import FencedCodeExtension
 from markdown.extensions.toc import TocExtension
 from markdown.inlinepatterns import InlineProcessor
+from markdown.preprocessors import Preprocessor
 
 RE_KEY_VALUE_PARSER = re.compile(
-    r"(\s*(?P<key>[^,]*?)\s*=\s*(\"|')(?P<value>[^,]*?)(\"|')\s*)+",
+    r"(?P<key>[^,]*?)\s*=\s*(\"|')(?P<value>[^,]*?)(\"|')",
 )
+
+MUNGED_COMMENT_PLACEHOLDER = "UXcjPMN4vAuwqQKs3Y"
 
 
 def get_kv_pairs(text: str) -> dict[str, str]:
-    return {
-        mch.group("key"): mch.group("value")
-        for mch in RE_KEY_VALUE_PARSER.finditer(text)
-    }
+    if not text:
+        return {}
+    _mch = RE_KEY_VALUE_PARSER.finditer(text)
+    return {mch.group("key"): mch.group("value") for mch in _mch} if _mch else {}
+
+
+class CommentMungerExtension(markdown.Extension):
+    class Preprocessor(Preprocessor):
+        custom_comments_ptrn = re.compile(r"^<!--% (.*) %-->$")
+
+        def run(self, lines):
+            return list(
+                map(
+                    lambda ln: self.custom_comments_ptrn.sub(
+                        MUNGED_COMMENT_PLACEHOLDER
+                        + r"\g<1>"
+                        + MUNGED_COMMENT_PLACEHOLDER,
+                        ln,
+                    ),
+                    lines,
+                )
+            )
+
+    def extendMarkdown(self, md):
+        md.preprocessors.register(self.Preprocessor(), "ext-comment-munger", 175)
+
+
+class RelativeStaticFilesExtension(markdown.Extension):
+    """Modify all relative path references
+
+    Args:
+        static_path_prefix (str): Prefix path for dst static files
+    """
+
+    def __init__(self, *args, static_path_prefix: str = "", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.static_path_prefix = static_path_prefix
+
+    class Preprocessor(Preprocessor):
+
+        ref_ptrn = re.compile(r"\[(?P<txt>.*)\]\(\./(?P<relPath>.*)\)")
+
+        def __init__(self, *args, static_path_prefix: str = "", **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.static_path_prefix = static_path_prefix.rstrip("/")
+
+        def run(self, lines):
+            return list(
+                map(
+                    lambda ln: self.ref_ptrn.sub(
+                        r"[\g<txt>](" + self.static_path_prefix + r"/\g<relPath>)", ln
+                    ),
+                    lines,
+                )
+            )
+
+    def extendMarkdown(self, md):
+        md.preprocessors.register(
+            self.Preprocessor(static_path_prefix=self.static_path_prefix),
+            "ext-img-preprocess",
+            175,
+        )
+
+
+class ImageExtension(markdown.Extension):
+    """Image with options.
+
+    Note that this extension requires the comment munger pre-processor too.
+
+    Usage:
+        ![alternate text](image path)
+        <!--% caption="some caption" src="https://...." %-->
+
+    Outputs:
+        <div class="ext-callout-note">
+            <span class="ext-callout-note-label">Note.</span>
+            <p>note as callout</p>
+        </div>
+    """
+
+    class Processor(InlineProcessor):
+        def handleMatch(self, m, data):
+            opts = get_kv_pairs(m.group("config"))
+
+            el = etree.Element("div", attrib={"class": "ext-image"})
+            img = etree.Element(
+                "img", attrib={"alt": m.group("altxt"), "src": m.group("path")}
+            )
+            el.append(img)
+
+            if opts.get("caption"):
+                caption = etree.Element("span", attrib={"class": "ext-image-caption"})
+                caption.text = opts.get("caption")
+                el.append(caption)
+
+            return el, m.start(0), m.end(0)
+
+    def extendMarkdown(self, md):
+        md.inlinePatterns.register(
+            self.Processor(
+                r"!\[(?P<altxt>.*?)\]\((?P<path>.*?)\)\s*"
+                + MUNGED_COMMENT_PLACEHOLDER
+                + r"?(?P<config>.*?)?"
+                + MUNGED_COMMENT_PLACEHOLDER
+                + "?",
+                md,
+            ),
+            "ext-callout-note",
+            175,
+        )
 
 
 class CalloutNoteExtension(markdown.Extension):
@@ -144,17 +254,20 @@ class TldrExtension(markdown.Extension):
         )
 
 
-def convert_markdown_to_html(text: str) -> str:
+def convert_markdown_to_html(text: str, static_path_prefix: str = "assets") -> str:
     return htmlmin.minify(
         markdown.markdown(
             text,
             extensions=[
+                RelativeStaticFilesExtension(static_path_prefix=static_path_prefix),
+                CommentMungerExtension(),
                 "tables",
                 FencedCodeExtension(),
                 TocExtension(title="Contents"),
                 CalloutNoteExtension(),
                 TldrExtension(),
                 QuoteExtension(),
+                ImageExtension(),
             ],
         )
     )

@@ -7,3 +7,4 @@ python-slugify
 pyyaml
 pydantic
 attrs
+htmlmin
