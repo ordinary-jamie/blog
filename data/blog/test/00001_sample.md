@@ -132,14 +132,18 @@ class FrontMatter(BaseModel):
 ### Quotes
 
 ```
-!quote[src='test', author='FDR']{
+!quote{
     Some quote
 }
+<!-- src="https://www.google.com" -->
+<!-- author="FDR" -->
 ```
 
-!quote[src='test', author='FDR']{
+!quote{
     Some quote
 }
+<!--% src="https://www.google.com" %-->
+<!--% author="FDR" %-->
 
 ### TLDR
 
