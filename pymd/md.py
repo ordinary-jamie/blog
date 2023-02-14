@@ -20,7 +20,15 @@ def get_kv_pairs(text: str) -> dict[str, str]:
     if not text:
         return {}
     _mch = RE_KEY_VALUE_PARSER.finditer(text)
-    return {mch.group("key"): mch.group("value") for mch in _mch} if _mch else {}
+    return (
+        {mch.group("key").strip(): mch.group("value").strip() for mch in _mch}
+        if _mch
+        else {}
+    )
+
+
+def get_div_pattern(class_name: str) -> str:
+    return rf"<div class=('|\"){class_name}('|\")>\s*(?P<body>.*)\s*</div>"
 
 
 class CommentMungerExtension(markdown.Extension):
@@ -81,177 +89,103 @@ class RelativeStaticFilesExtension(markdown.Extension):
         )
 
 
-class ImageExtension(markdown.Extension):
-    """Image with options.
+def extension_with_comment_modifiers(name: str, pattern: str):
+    def _decorator(fn) -> markdown.Extension:
+        class Extension(markdown.Extension):
+            class Processor(InlineProcessor):
+                def handleMatch(self, m, data):
 
-    Note that this extension requires the comment munger pre-processor too.
+                    opts = (
+                        get_kv_pairs(
+                            re.sub(MUNGED_COMMENT_PLACEHOLDER, "", m.group("config"))
+                        )
+                        if m.group("config")
+                        else {}
+                    )
+                    return fn(m, opts), m.start(0), m.end(0)
 
-    Usage:
-        ![alternate text](image path)
-        <!--% caption="some caption" src="https://...." %-->
+            def extendMarkdown(self, md):
+                md.inlinePatterns.register(
+                    self.Processor(
+                        rf"{pattern}(\s*{MUNGED_COMMENT_PLACEHOLDER}(?P<config>.*){MUNGED_COMMENT_PLACEHOLDER})?"
+                    ),
+                    f"ext-{name}",
+                    175,
+                )
 
-    Outputs:
-        <div class="ext-callout-note">
-            <span class="ext-callout-note-label">Note.</span>
-            <p>note as callout</p>
-        </div>
-    """
+        Extension.__name__ = f"{name.title}Extension"
+        return Extension
 
-    class Processor(InlineProcessor):
-        def handleMatch(self, m, data):
-            opts = get_kv_pairs(m.group("config"))
-
-            el = etree.Element("div", attrib={"class": "ext-image"})
-            img = etree.Element(
-                "img", attrib={"alt": m.group("altxt"), "src": m.group("path")}
-            )
-            el.append(img)
-
-            if opts.get("caption"):
-                caption = etree.Element("span", attrib={"class": "ext-image-caption"})
-                caption.text = opts.get("caption")
-                el.append(caption)
-
-            return el, m.start(0), m.end(0)
-
-    def extendMarkdown(self, md):
-        md.inlinePatterns.register(
-            self.Processor(
-                r"!\[(?P<altxt>.*?)\]\((?P<path>.*?)\)\s*"
-                + MUNGED_COMMENT_PLACEHOLDER
-                + r"?(?P<config>.*?)?"
-                + MUNGED_COMMENT_PLACEHOLDER
-                + "?",
-                md,
-            ),
-            "ext-callout-note",
-            175,
-        )
+    return _decorator
 
 
-class CalloutNoteExtension(markdown.Extension):
-    """Callout notes
+@extension_with_comment_modifiers("image", r"!\[(?P<altxt>.*?)\]\((?P<path>.*?)\)")
+def ImageExtension(m, opts):
+    el = etree.Element("div", attrib={"class": "ext-image"})
+    img = etree.Element("img", attrib={"alt": m.group("altxt"), "src": m.group("path")})
+    el.append(img)
 
-    Usage:
-        !note{
-            note as callout
-        }
+    if opts.get("caption"):
+        caption = etree.Element("span", attrib={"class": "ext-image-caption"})
+        caption.text = opts.get("caption")
+        el.append(caption)
 
-    Outputs:
-        <div class="ext-callout-note">
-            <span class="ext-callout-note-label">Note.</span>
-            <p>note as callout</p>
-        </div>
-    """
-
-    class Processor(InlineProcessor):
-        def handleMatch(self, m, data):
-            el = etree.Element("div", attrib={"class": "ext-callout-note"})
-            label = etree.Element("span", attrib={"class": "ext-callout-note-label"})
-            label.text = "Note."
-            el.append(label)
-
-            for line in filter(
-                lambda s: s != "", map(str.strip, m.group("text").split("\n"))
-            ):
-                p = etree.Element("p")
-                p.text = line
-                el.append(p)
-
-            return el, m.start(0), m.end(0)
-
-    def extendMarkdown(self, md):
-        md.inlinePatterns.register(
-            self.Processor(r"!note{(?P<text>(.|\n)*?)}", md),
-            "ext-callout-note",
-            175,
-        )
+    return el
 
 
-class QuoteExtension(markdown.Extension):
-    """Quotes
+@extension_with_comment_modifiers("note", r"!note{\s*(?P<body>.*)\s*}")
+def CalloutNoteExtension(m, opts):
+    el = etree.Element("div", attrib={"class": "ext-callout-note"})
+    label = etree.Element("span", attrib={"class": "ext-callout-note-label"})
+    label.text = "Note."
+    el.append(label)
 
-    Usage:
-        !quote[src="https://www.google.com", author="Albert Einstein"]{
-            Some quote
-        }
+    for line in filter(lambda s: s != "", map(str.strip, m.group("body").split("\n"))):
+        p = etree.Element("p")
+        p.text = line
+        el.append(p)
 
-    Outputs:
-        <div class="ext-quote">
-            <span class="ext-quote-author"><a href="https://www.google.com">Albert Einstein</a></span>
-            <p>Some quote</p>
-        </div>
-    """
-
-    class Processor(InlineProcessor):
-        def handleMatch(self, m, data):
-
-            opts = get_kv_pairs(m.group("opts"))
-            url = opts.get("src")
-            author = opts.get("author")
-
-            el = etree.Element("div", attrib={"class": "ext-quote"})
-
-            authorEl = etree.Element("span", attrib={"class": "ext-quote-author"})
-            if url and author:
-                a = etree.Element("a", attrib={"href": url})
-                a.text = author
-                authorEl.append(a)
-            elif url or author:
-                p = etree.Element("p")
-                p.text = author if author else url
-                authorEl.append(p)
-
-            el.append(authorEl)
-
-            p = etree.Element("p")
-            p.text = re.sub(r"\s+", " ", m.group("text"))
-            el.append(p)
-
-            return el, m.start(0), m.end(0)
-
-    def extendMarkdown(self, md):
-        md.inlinePatterns.register(
-            self.Processor(r"!quote(\[(?P<opts>.*?)\])?{(?P<text>(.|\n)*?)}", md),
-            "ext-quote",
-            175,
-        )
+    return el
 
 
-class TldrExtension(markdown.Extension):
-    """TLDR
+@extension_with_comment_modifiers("tldr", r"!tldr{\s*(?P<body>.*)\s*}")
+def TldrExtension(m, opts):
+    el = etree.Element("div", attrib={"class": "ext-tldr"})
+    label = etree.Element("span", attrib={"class": "ext-tldr-label"})
+    label.text = "TLDR."
+    el.append(label)
 
-    Usage:
-        !tldr{
-            TL;DR
-        }
+    p = etree.Element("p")
+    p.text = re.sub(r"\s+", " ", m.group("body"))
+    el.append(p)
 
-    Outputs:
-        <div class="ext-tldr">
-            <span class="ext-tldr-label">Note.</span>
-            <p>TL;DR</p>
-        </div>
-    """
+    return el
 
-    class Processor(InlineProcessor):
-        def handleMatch(self, m, data):
-            el = etree.Element("div", attrib={"class": "ext-tldr"})
-            label = etree.Element("span", attrib={"class": "ext-tldr-label"})
-            label.text = "TLDR."
-            el.append(label)
 
-            p = etree.Element("p")
-            p.text = re.sub(r"\s+", " ", m.group("text"))
-            el.append(p)
+@extension_with_comment_modifiers("quote", r"!quote{\s*(?P<body>.*)\s*}")
+def QuoteExtension(m, opts):
+    url = opts.get("src")
+    author = opts.get("author")
 
-            return el, m.start(0), m.end(0)
+    el = etree.Element("div", attrib={"class": "ext-quote"})
 
-    def extendMarkdown(self, md):
-        md.inlinePatterns.register(
-            self.Processor(r"!tldr{(?P<text>(.|\n)*?)}", md),
-            "ext-tldr",
-            175,
-        )
+    authorEl = etree.Element("span", attrib={"class": "ext-quote-author"})
+    if url and author:
+        a = etree.Element("a", attrib={"href": url})
+        a.text = author
+        authorEl.append(a)
+    elif url or author:
+        p = etree.Element("p")
+        p.text = author if author else url
+        authorEl.append(p)
+
+    el.append(authorEl)
+
+    p = etree.Element("p")
+    p.text = re.sub(r"\s+", " ", m.group("body"))
+    el.append(p)
+
+    return el
 
 
 def convert_markdown_to_html(text: str, static_path_prefix: str = "assets") -> str:
