@@ -18,16 +18,14 @@ onMounted(() => {
 
 <template>
     <div class="flex gap-8 items-end
-                border-slate-200" style="border-bottom-width: 1px">
-        <h1 v-show="showFullName" class="text-sky-900 text-4xl font-sans tracking-tight font-normal -mb-1">
-            <span class="text-sky-500 text-xl font-mono">~$ <span
-                class="font-extrabold animate-blink -mr-4">__</span>
-            </span>Jamie Phan
+                border-slate-500" style="border-bottom-width: 1.5px">
+        <h1 v-show="showFullName" class="text-slate-700 text-4xl font-sans tracking-tight font-semibold -mb-1">
+            <span class="text-slate-700 text-xl font-mono">~$</span>
+            Jamie Phan
         </h1>
-        <h1 v-show="!showFullName" class="text-sky-900 text-4xl font-sans tracking-tight font-normal -mb-1">
-            <span class="text-sky-500 text-xl font-mono">~$ <span
-                class="font-extrabold animate-blink -mr-4">__</span>
-            </span>J.P.
+        <h1 v-show="!showFullName" class="text-skslatey-700 text-4xl font-sans tracking-tight font-semibold -mb-1">
+            <span class="text-slate-700 text-xl font-mono">~$</span>
+            J.P.
         </h1>
         <div class="flex-auto"></div>
         <div class="animate-bounce opacity-0 hover:opacity-100 ease-in-out duration-300">👻<sup

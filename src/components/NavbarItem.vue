@@ -18,9 +18,9 @@ defineProps({
 <template>
     <RouterLink :to="routeTo">
         <div class="group">
-            <p class="text-sky-900
+            <p class="text-slate-700
                     group-hover:text-sky-500 text-sm font-semibold
-                    decoration-slate-800">
+                    decoration-slate-700">
                 {{ label }}
             </p>
         </div>
