@@ -63,7 +63,7 @@ const routeTo = computed(() => {
                         }}</span>
                     </div>
                 </div>
-                <div class="flex text-slate-400 font-thin text-sm group-hover:text-slate-800 pl-1 items-top">
+                <div class="flex text-slate-400 font-thin font-serif text-sm group-hover:text-slate-800 pl-1 items-top">
                     <div>
                         <slot />&thinsp;
                         <template v-for=" (tag, i) in tags">
@@ -71,10 +71,10 @@ const routeTo = computed(() => {
                                 tag
                             }}
                             </span>
-                            {{ i<tags.length - 1 ? '&thinsp;' : '' }} </template>
+                            {{ i < tags.length - 1 ? '&thinsp;' : '' }} </template>
                     </div>
                     <div class="w-8 flex-grow"></div>
-                    <span class="text-slate-500 text-sm group-hover:text-sky-600">{{
+                    <span class="text-slate-500 text-sm font-sans group-hover:text-sky-600">{{
                         displayDtFields.year
                     }}</span>
                 </div>

@@ -5,7 +5,7 @@ module.exports = {
     extend: {},
     fontFamily: {
       'sans': ['Helvetica', 'Arial', 'sans-serif'],
-      'serif': ['Georgia', 'Times New Roman'],
+      'serif': ['Roboto Serif', 'Georgia', 'Times New Roman'],
       'mono': ['Courier', 'Courier New']
     }
   },

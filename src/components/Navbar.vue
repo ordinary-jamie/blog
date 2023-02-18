@@ -18,20 +18,20 @@ onMounted(() => {
 
 <template>
     <div class="flex gap-8 items-end
-                 border-slate-200" style="border-bottom-width: 1px">
-        <h1 v-show="showFullName" class="text-sky-900
-            text-4xl font-sans tracking-tighter -mb-1">
+                border-slate-200" style="border-bottom-width: 1px">
+        <h1 v-show="showFullName" class="text-sky-900 text-4xl font-sans tracking-tight font-normal -mb-1">
             <span class="text-sky-500 text-xl font-mono">~$ <span
-                    class="font-extrabold animate-blink -mr-4">__</span></span>Jamie Phan
+                class="font-extrabold animate-blink -mr-4">__</span>
+            </span>Jamie Phan
         </h1>
-        <h1 v-show="!showFullName" class="text-sky-900
-            text-4xl font-sans tracking-tighter -mb-1">
+        <h1 v-show="!showFullName" class="text-sky-900 text-4xl font-sans tracking-tight font-normal -mb-1">
             <span class="text-sky-500 text-xl font-mono">~$ <span
-                    class="font-extrabold animate-blink -mr-4">__</span></span>J.P.
+                class="font-extrabold animate-blink -mr-4">__</span>
+            </span>J.P.
         </h1>
         <div class="flex-auto"></div>
         <div class="animate-bounce opacity-0 hover:opacity-100 ease-in-out duration-300">👻<sup
-                class="text-red-400 text-xs font-bold"> boo!</sup></div>
+            class="text-red-400 text-xs font-bold"> boo!</sup></div>
         <NavbarItem routeTo="/" label="Home" />
         <NavbarItem routeTo="/about" label="About" />
     </div>
@@ -54,5 +54,9 @@ onMounted(() => {
     100% {
         opacity: 1.0;
     }
+}
+
+h1 {
+    font-family: "Urbanist";
 }
 </style>

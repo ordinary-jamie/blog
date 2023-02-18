@@ -53,26 +53,31 @@
 
 /* ------------------------------------------------------------------------- */
 /* Headings */
-:deep(h2) {
-    @apply font-bold font-serif text-2xl text-sky-500 mt-16;
-}
-
-:deep(h3) {
-    @apply font-bold font-serif italic text-xl text-sky-600 mt-8;
-}
 
 /* ------------------------------------------------------------------------- */
 /* Base Typography */
-:deep(p) {
-    @apply text-slate-700 my-2 leading-6;
-}
-
 :deep(a) {
-    @apply text-violet-500 underline hover:animate-pulse;
+    @apply underline decoration-sky-500 decoration-2 underline-offset-2 hover:underline hover:text-sky-500;
 }
 
 :deep(li) {
-    @apply text-slate-700 ml-8 leading-6;
+    @apply ml-8;
+}
+
+:deep(p), :deep(li) {
+    font-family: 'Roboto Serif', serif;
+    font-weight: 400;
+    @apply text-lg leading-8 text-slate-800 my-2;
+}
+
+:deep(h2) {
+    font-family: 'Urbanist', sans-serif;
+    font-weight: 500;
+    @apply font-sans font-bold text-3xl text-slate-900 mt-16;
+}
+
+:deep(h3) {
+    @apply font-bold font-sans italic text-xl text-slate-900 mt-8;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -131,7 +136,7 @@
 /* ------------------------------------------------------------------------- */
 /* Table of contents */
 :deep(div.toc) {
-    @apply text-xs w-full sm:w-2/3 mt-8 p-2 rounded-lg ring-1 ring-slate-300 shadow-md
+    @apply w-full sm:w-2/3 mt-8 p-2 rounded-lg ring-1 ring-slate-300 shadow-md
         2xl:fixed 2xl:w-72 2xl:mt-0 2xl:p-0 2xl:left-16 2xl:top-48 2xl:ring-0 2xl:shadow-none;
 }
 
@@ -141,13 +146,18 @@
 }
 
 :deep(div.toc a) {
-    @apply my-2 leading-6 no-underline hover:text-sky-400 text-slate-500
+    @apply my-2 font-serif text-sm leading-6 no-underline hover:text-sky-400 text-slate-500
         2xl:text-slate-400;
 }
 
 :deep(.toc ul) {
     /* Only top-level */
     @apply list-none;
+}
+
+:deep(.toc li) {
+    /* Only nested list have disc */
+    @apply leading-6 my-0;
 }
 
 :deep(.toc li > ul) {
@@ -166,5 +176,5 @@
 
 :deep(.toc > * > li li) {
     /* All leaves */
-    @apply ml-4;
+    @apply ml-8;
 }

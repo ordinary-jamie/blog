@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Serif:ital,opsz,wght@0,8..144,400;0,8..144,700;1,8..144,200&family=Urbanist:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,7 +7,16 @@
 @layer base {
 
     h1 {
-        @apply font-serif tracking-tight text-5xl text-sky-500;
+        @apply font-sans font-bold text-6xl text-slate-900;
+        font-family: "Urbanist";
+    }
+
+    h2 {
+        font-family: "Urbanist";
+    }
+
+    h3 {
+        font-family: "Urbanist";
     }
 
 }
