@@ -93,15 +93,16 @@
 /* ------------------------------------------------------------------------- */
 /* Tables */
 :deep(table) {
-    @apply bg-slate-50 rounded-lg ring-slate-300 ring-1 shadow-md table-auto border-separate border-spacing-1 min-w-full;
+    @apply border-y-2 border-slate-700 table-auto border-separate border-spacing-1.5 min-w-full;
 }
 
 :deep(th) {
-    @apply border border-slate-300 bg-slate-400 px-4 py-1 text-white;
+    @apply py-3 border-slate-700;
+    border-bottom-width: 1px;
 }
 
 :deep(td) {
-    @apply border border-slate-200 px-2 py-1;
+    @apply px-2 py-1;
 }
 
 /* ------------------------------------------------------------------------- */
