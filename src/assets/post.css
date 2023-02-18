@@ -136,8 +136,8 @@
 /* ------------------------------------------------------------------------- */
 /* Table of contents */
 :deep(div.toc) {
-    @apply w-full sm:w-2/3 mt-8 p-2 rounded-lg ring-1 ring-slate-300 shadow-md
-        2xl:fixed 2xl:w-72 2xl:mt-0 2xl:p-0 2xl:left-16 2xl:top-48 2xl:ring-0 2xl:shadow-none;
+    @apply w-full sm:w-2/3 mt-8 p-2 border-y-2 border-slate-500
+        2xl:fixed 2xl:w-72 2xl:mt-0 2xl:p-0 2xl:left-16 2xl:top-48 2xl:border-y-0;
 }
 
 :deep(div.toc > .toctitle) {
@@ -157,7 +157,7 @@
 
 :deep(.toc li) {
     /* Only nested list have disc */
-    @apply leading-6 my-0;
+    @apply leading-8 2xl:leading-6 my-0;
 }
 
 :deep(.toc li > ul) {
